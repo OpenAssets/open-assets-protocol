@@ -1,0 +1,138 @@
+<pre>
+  Title: Colored Coin Protocol (CCP/1.0)
+  Created: 12-12-2013
+</pre>
+
+==Abstract==
+
+This document describes the a protocol used for coloring outputs in the Blockchain.
+
+Colored coins are initially issued using normal uncolored Bitcoins and marking them with a color. They can then be transferred using transactions that preserve the amount of coins of every color.
+
+==Motivation==
+
+In the current Bitcoin implementation, outputs have an output script and a value. Colored Coin Protocol adds the ability to have a color component to each output.
+
+There are numerous applications to colored coins:
+
+* A company might want to issue shares using colored coins, taking advantage of the Bitcoin infrastructure to allow people to maintain ownership of shares and trade shares, and even allow voting and pay dividends over the Bitcoin blockchain.
+
+* Smart property: suppose there is a car rental company. The company can release one colored coin to represent each car, and then configure the car to turn on only if it receives a message signed with the private key that currently owns the colored coin. It can then release a smartphone app that anyone can use to broadcast a message signed with their private key, and put up the colored coins on a trading platform. Anyone will be able to then purchase a colored coin, use the car for whatever period of time using the smartphone app as a "car key", and sell the coin again at their leisure.
+
+* A local community might wish to create a community currency, using the Bitcoin infrastructure to securely store funds.
+
+* A company may wish to create a corporate currency, such as Air Miles rewards points, or even plain coupons.
+
+* A bank might wish to release a coin to represent deposits, allowing people to trade, for example, "USD coins" or "gold coins".
+
+==Protocol==
+
+Each output in the Blockchain can either be uncolored, or be tagged with a unique color. Each color is uniquely identified by an output script. The input script capable of redeeming that output script is required for creating outputs colored with that color, from inputs uncolored or of a different color (this is referred as the genesis, or issuance process).
+
+When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined.
+
+The Colored Coins Protocol uses two types of transactions: one to mark coins as colored, and one to transfer colored coins. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
+
+===Color Genesis===
+
+In order to issue coins of a color identified by a particular output script, the issuer must have in their possession the matching input script.
+
+In the typical use case, the script would be a Pay-to-PubkeyHash script. The issuer would create a color by generating an address with the matching private key, and that address can be used to uniquely identify the color. The private key is then required to issue coins of that color.
+
+In order to issue coins of a particular color, the issuer should construct a genesis transaction using the following scheme:
+
+{|
+! Input    || Description || Color
+|-
+| Input 0  || The output script of the referenced output is the color issued in this genesis transaction. || The referenced output can be of any color.
+|-
+| Input 1+ || Any other inputs || The referenced outputs can be of any color.
+|}
+
+{|
+! Output    || Description || Color
+|-
+| Output 0  || An OP_RETURN containing data. See table below for more details. || The output is neither colored or uncolored since it is not spendable.
+|-
+| Output 1  || An output that can be used for change. || Considered uncolored.
+|-
+| Output 2+ || Colored outputs. || Considered colored with the color defined by the output script referenced by Input 0.
+|}
+
+Transaction fees are always uncolored.
+
+The output 0 of a genesis transaction uses the OP_RETURN operator, and contains the following data:
+
+{|
+! Field            || Description || Size
+|-
+| CCP Marker       || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000. || 5 bytes
+|-
+| Version number   || The major revision number of the CCP protocol used. For this version, it is always 0x0001. || 2 bytes
+|-
+| Transaction type || 0x00 to indicate this is a genesis transaction. || 1 byte
+|-
+| Metadata         || Used for optional metadata associated with the color genesis transaction. || Any size is valid
+|}
+
+===Color transfer===
+
+Transfer transactions can then be used to transfer any amount of colored coin. A transfer transaction is constructed as follow:
+
+{|
+! Input     || Description
+|-
+| Input 0+  || Each input can be of any color, or uncolored. They do not need to have all the same color.
+|}
+
+{|
+! Output    || Description
+|-
+| Output 0  || An OP_RETURN containing data. See table below for more details.
+|-
+| Output 1+  || Outputs of the transaction, which will be colored according to the coloring algorithms (see below).
+|}
+
+The output 0 of a transfer transaction uses the OP_RETURN operator, and contains the following data:
+
+{|
+! Field              || Description || Size
+|-
+| CCP Marker         || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000 || 5 bytes
+|-
+| Version number     || The major revision number of the CCP protocol used. For this version, it is always 0x0001 || 2 bytes
+|-
+| Transaction type   || 0x01 to indicate this is a transfer transaction. || 1 byte
+|-
+| Coloring algorithm || A value representing the coloring algorithm used in the transaction. In version 1.0, this must be 0x00 to indicate sequence number based coloring. || 1 byte
+|-
+| Metadata           || Used for optional metadata associated with the color transfer transaction. || Any size is valid
+|}
+
+In a typical non-colored Bitcoin transaction, all the inputs and outputs use the same unit (Bitcoin), however in a colored coin transfer transaction, inputs may have different colors. Because of this, a convension must be used to determine which input maps to which output. This is what the coloring algorithm is for.
+
+In version 1.0 of the protocol, only sequence number based coloring is supported. The value indicating sequence number based coloring is 0x00. Sequence number based coloring is described in the next section.
+
+If the coloring algorithm field contains an unknown value, all the outputs of the transaction should be considered uncolored.
+
+===Sequence number based coloring===
+
+This algorithm is selected if the 'coloring algorithm' field of the output 0 of a transfer transaction is 0x00. This is the only coloring algorithm supported by CCP 1.0.
+
+The algorithm works by using the sequence number as a bit field, so if bit 7 of input 4 is set to 1 that means that input for maps to output 7.  For each input, the value "flows" into the outputs that are mapped to that input. For example, if an input has a value of 50000 and it is mapped to outputs 1, 3, 5 and 7, each with value 20000, then from that input 20000 will be mapped to output 1, another 20000 to output 3, only 10000 to output 5 and 0 to output 7.
+
+At the end of this process, if any output receives mixed colors, or is not filled completely, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored.
+
+Mining clients modified to support the colored coin protocol should reject such transactions.
+
+==Compatibility==
+
+===Compatibility with vanilla Bitcoin protocol===
+
+The Colored Coins Protocol sits on top of the Bitcoin Blockchain. It does not require any change to the existing Bitcoin protocol. Existing clients that don't support colors will see all outputs as uncolored, and will not be able to perform transfer transactions.
+
+===Compatibility between different versions of CCP===
+
+New versions with the same major version number (e.g. 1.1) should be backwards compatible, but may include new coloring algorithms. If they do so, older version will not recognize the transfer transactions created by newer clients, and using the new algorithm, but this is considered a valid behavior.
+
+New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identified by a different version number in the output 0 of genesis and transfer transactions.
