@@ -29,7 +29,7 @@ There are numerous applications to colored coins:
 
 ==Protocol==
 
-Each output in the Blockchain can either be uncolored, or be tagged with a unique color. Each color is uniquely identified by an output script. The input script capable of redeeming that output script is required for issuing colored coins of that color, from inputs uncolored or of a different color (this is referred as the genesis, or issuance process).
+Each output in the Blockchain can either be uncolored, or be tagged with a unique color. Each color is uniquely identified by an output script. The input script capable of redeeming that output script is required for issuing colored coins of that color (this is referred to as the genesis, or issuance process).
 
 In the typical use case, the script would be a Pay-to-PubkeyHash script. The issuer would create a color by generating an address with the matching private key, and that address can be used to uniquely identify the color. The private key is then required to issue coins of that color.
 
@@ -46,7 +46,7 @@ Issuing colored coins is done though a special transaction called genesis transa
 {|
 ! Input/Output !! Description !! Color
 |-
-! Input 0      || The script of the referenced output identifies the color issued in this genesis transaction. || The referenced output can be of any color.
+! Input 0      || The script of the referenced output identifies the color of '''outputs 2+'''. || The referenced output can be of any color.
 |-
 ! Input 1+     || Any other inputs. || The referenced outputs can be of any color.
 |-
