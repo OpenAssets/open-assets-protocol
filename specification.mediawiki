@@ -43,22 +43,18 @@ In the typical use case, the script would be a Pay-to-PubkeyHash script. The iss
 
 In order to issue coins of a particular color, the issuer should construct a genesis transaction using the following scheme:
 
-{| style="width: 100%;
-! width="80px" | Input ! width="50%" | Description !! Color
+{|
+! Input/Output !! Description !! Color
 |-
-| Input 0              || The script of the referenced output identifies the color issued in this genesis transaction. || The referenced output can be of any color.
+! Input 0      || The script of the referenced output identifies the color issued in this genesis transaction. || The referenced output can be of any color.
 |-
-| Input 1+             || Any other inputs || The referenced outputs can be of any color.
-|}
-
-{| style="width: 100%;
-! width="80px" | Output ! width="50%" | Description !! Color
+! Input 1+     || Any other inputs. || The referenced outputs can be of any color.
 |-
-| Output 0              || An OP_RETURN containing data. See table below for more details. || The output is neither colored or uncolored since it is not spendable.
+! Output 0     || An OP_RETURN containing data. See table below for more details. || The output is neither colored nor uncolored since it is not spendable.
 |-
-| Output 1              || An output that can be used for change. || Considered uncolored.
+! Output 1     || An output that can be used for change. || Considered uncolored.
 |-
-| Output 2+             || Colored outputs. || Considered colored with the color defined by the output script referenced by Input 0.
+! Output 2+    || Colored outputs. || Considered colored with the color defined by the output script referenced by Input 0.
 |}
 
 Transaction fees are always uncolored.
@@ -67,50 +63,46 @@ By signing input 0, the issuer proves he can redeem the output script for the co
 
 The output 0 of a genesis transaction uses the OP_RETURN operator, and contains the following data:
 
-{| style="width: 100%;
-! width="20%" | Field !! Description ! width="20%" | Size
+{|
+! Field            !! Description !! Size
 |-
-| CCP Marker          || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000. || 5 bytes
+! CCP Marker       || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000. || 5 bytes
 |-
-| Version number      || The major revision number of the CCP protocol used. For this version, it is always 0x0001. || 2 bytes
+! Version number   || The major revision number of the CCP protocol used. For this version, it is always 0x0001. || 2 bytes
 |-
-| Transaction type    || 0x00 to indicate this is a genesis transaction. || 1 byte
+! Transaction type || 0x00 to indicate this is a genesis transaction. || 1 byte
 |-
-| Metadata            || Used for optional metadata associated with the color genesis transaction. || Any size is valid
+! Metadata         || Used for optional metadata associated with the color genesis transaction. || Any size is valid
 |}
 
 ===Color transfer===
 
 Transfer transactions can then be used to transfer any amount of colored coin. A transfer transaction is constructed as follow:
 
-{| style="width: 100%;
-! width="80px" | Input !! Description
+{|
+! Input/Output !! Description
 |-
-| Input 0+             || Each input can be of any color, or uncolored. They do not need to have all the same color.
-|}
-
-{| style="width: 100%;
-! width="80px" | Output !! Description
+! Input 0+     || Each input can be of any color, or uncolored. They do not need to have all the same color.
 |-
-| Output 0              || An OP_RETURN containing data. See table below for more details.
+! Output 0     || An OP_RETURN containing data. See table below for more details.
 |-
-| Output 1+             || Outputs of the transaction, which will be colored according to the coloring algorithms (see below).
+! Output 1+    || Outputs of the transaction, which will be colored according to the coloring algorithms (see below).
 |}
 
 The output 0 of a transfer transaction uses the OP_RETURN operator, and contains the following data:
 
-{| style="width: 100%;
-! width="20%" | Field !! Description ! width="20%" | Size
+{|
+! Field               !! Description !! Size
 |-
-| CCP Marker          || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000 || 5 bytes
+! CCP Marker          || A marker indicating that this transaction is using Colored Coins Protocol. It is always 0x0043435000. || 5 bytes
 |-
-| Version number      || The major revision number of the CCP protocol used. For this version, it is always 0x0001 || 2 bytes
+! Version number      || The major revision number of the CCP protocol used. For this version, it is always 0x0001. || 2 bytes
 |-
-| Transaction type    || 0x01 to indicate this is a transfer transaction. || 1 byte
+! Transaction type    || 0x01 to indicate this is a transfer transaction. || 1 byte
 |-
-| Coloring algorithm  || A value representing the coloring algorithm used in the transaction. In version 1.0, this must be 0x00 to indicate sequence number based coloring. || 1 byte
+! Coloring algorithm  || A value representing the coloring algorithm used in the transaction. In version 1.0, this must be 0x00 to indicate sequence number based coloring. || 1 byte
 |-
-| Metadata            || Used for optional metadata associated with the color transfer transaction. || Any size is valid
+! Metadata            || Used for optional metadata associated with the color transfer transaction. || Any size is valid
 |}
 
 In a typical non-colored Bitcoin transaction, all the inputs and outputs use the same unit (Bitcoin), however in a colored coin transfer transaction, inputs may have different colors. Because of this, a convension must be used to determine which input maps to which output. This is what the coloring algorithm is for.
@@ -134,21 +126,13 @@ Mining clients modified to support the colored coin protocol should reject such 
 This approach offers a number of desirable characteristics:
 
 # Economical: Neither the genesis process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
-
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coins Protocol are identified by the special marker.
-
 # Colors are pseudonymous. They are represented by an output script, which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
-
 # This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
-
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
-
 # Generating a color is as simple as generating an address, and can even be done offline.
-
 # Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer keeps the matching private key.
-
 # Single-issue colors can be achieved by simply generating an address and the matching private key, issue coins using the private key, then permanently destroy it.
-
 # Since colors are identified by an output script, it is possible to create a color that requires multiple signatures for issuance.
 
 ==Compatibility==
