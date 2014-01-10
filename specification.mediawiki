@@ -26,26 +26,132 @@ There are numerous applications to colored coins:
 
 * A bank might wish to release a coin to represent deposits, allowing people to trade, for example, "USD coins" or "gold coins".
 
-==Protocol==
+==Protocol Overview==
 
-Each output in the Blockchain can either be uncolored, or be tagged with a color.
+Each output in the Blockchain can either be uncolored, or be tagged with a color. The color of an output has two components: the ''issue ID'' and the ''issuing script''.
 
-The color of an output has two components. The '''physical color''' is the hash of the transaction that issued those colored coins. Coins with the same physical color are interchangeable with each other. Coins of a given physical color are in limited supply.
+The '''issue ID''' is the hash of the transaction that issued those colored coins. Coins with the same ''issue ID'' are interchangeable with each other, and they are in limited supply.
 
-By convention, the '''logical color''' of an output is the output script referenced by the first input of the issuing transaction. The logical color is a representation of who issued the coins. Coins that have the same logical color cannot be mixed together unless they also have the same physical color. Coins of a given logical color can be re-issued at will as long as the issuer retains the private key required to issue them.
+The '''issuing script''' of an output is, by convention, the output script referenced by the first input of the issuing transaction. When the ''issue ID'' of an output is known, it is easy to find the ''issuing script'' by looking up the issuing transaction by hash, and examining the first input. The ''issuing script'' is a representation of who issued the coins. Coins that have the same ''issuing script'' cannot be mixed together unless they also have the same ''issue ID''. The issuer can reissue new coins having the same ''issuing script'' as long as they retain the private key required to redeem that script.
 
-In the typical use case, the logical color would be a Pay-to-PubKey-Hash script. The issuer would create a color by generating an address and the matching private key. The private key is then used to issue coins. This gives the guarantee that nobody else but the original issuer is able to issue coins with the same logical color.
+In the typical use case, the ''issuing script'' would be a Pay-to-PubKey-Hash script. The issuer would create a script by generating an address and the matching private key. The private key is then used to issue coins with that particular ''issuing script''. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue coins with the same ''issuing script''.
 
 When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. That contract can be defined at multiple levels:
-* At the physical color level: the issuer would for example only commit to redeem coins issued by transactions listed on their website.
-* At the logical color level: the issuer could commit to redeem any coin of a specific logical color.
-* At an intermediate level: the issuer would commit to redeem coins of a specific logical color, except if the issuing transaction has been repudiated.
+* At the issue level: the issuer would for example only commit to redeem coins issued by transactions listed on their website.
+* At the issuing script level: the issuer could commit to redeem any coin that has a particular ''issuing script''.
+* At an intermediate level: the issuer would commit to redeem coins that have a particular ''issuing script'', except if the issuing transaction appears on a list of repudiated issues.
 
 The Colored Coins Protocol uses two types of transactions: one to issue colored coins, and one to transfer colored coins. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
 
-===Colored Coin Marker Output===
+==Colored Coins Transactions==
 
-Transactions relevant to the Colored Coins Protocol contain a special output called the marker output. The marker output is an OP_RETURN output followed by a header. The contents of the marker header is described below. Additional optional metadata can be appended after the header.
+===Issuing colored coins===
+
+Issuing new colored coins is done through a special transaction called issue transaction. The format of such transaction is described below:
+
+{|
+! Input/Output                     !! Description !! Color
+|-
+! Input 0                          || The output script referenced by this input becomes the ''issuing script'' of the coins being issued. || The referenced output can be of any color.
+|-
+! Input 1+                         || Any other inputs. || The referenced outputs can be of any color.
+|-
+! Outputs before the marker output || Colored outputs. || Considered colored.
+|-
+! Marker output                    || This output is the [[#colored-coins-marker-output|marker output]], it uses the OP_RETURN operator. || The output is neither colored nor uncolored since it is not spendable.
+|-
+! Outputs after the marker output  || Outputs used for change. || Considered uncolored.
+|-
+! Fees                             || Transaction fees left for the miners. || Considered uncolored.
+|}
+
+The marker output acts as a separator between colored outputs, which are before the marker, and uncolored outputs, which are after.
+
+Colored outputs have the following characteristics:
+* Their '''issue ID''' is the standard transaction hash of this transaction.
+* Their '''issuing script''' is the output script referenced by the first input of this transaction.
+
+===Color transfer===
+
+Transfer transactions are used to send colored and uncolored coins. A transfer transaction is constructed as follow:
+
+{|
+! Input/Output !! Description
+|-
+! Input 0+     || Each input can be of any color, or uncolored. They do not need to have all the same color.
+|-
+! Output 0     || This output is the [[#colored-coins-marker-output|marker output]], it uses the OP_RETURN operator.
+|-
+! Output 1+    || Other outputs of the transaction.
+|-
+! Fees         || Transaction fees left for the miners. Considered uncolored.
+|}
+
+The [[#colored-coins-marker-output|marker output]] output uses the OP_RETURN operator to store data. It indicates to color-aware clients that this transaction is relevant for the Colored Coins Protocol.
+
+If an output has the value of zero satoshis (this can be the case for the marker output), it is considered uncolored.
+
+====Output coloring====
+
+The ''issue ID'' of outputs are determined using a method called order based coloring.
+
+The algorithm works by coloring outputs in the same order as inputs are colored, taking values into account. When an output is mapped to an input, the ''issue ID'' and ''issuing script'' of the output referenced by the input is carried to the output.
+
+The boundaries where an input with a particular ''issue ID'' is followed by an input with a different ''issue ID'' should match boundaries between outputs. If any of the input boundary is not aligned with an output boundary, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored. Fees must be paid using uncolored coins for the transaction to be valid, and must come from the last inputs.
+
+Clients modified to support the Colored Coins Protocol should reject transfer transactions that do not follow those rules.
+
+====Example====
+
+This is an example of a valid transfer transaction:
+
+    =============================   =============================
+    Input 0                         Output 0 - Marker output
+      Value:          1               Value:          0
+      Issue ID:       104cc329...     Issue ID:       <NULL>
+      Issuing script: 76A914AA...     Issuing script: <NULL>
+    -----------------------------   -----------------------------
+    Input 1                         Output 1
+      Value:          3               Value:          2
+      Issue ID:       104cc329...     Issue ID:       104cc329...
+      Issuing script: 76A914AA...     Issuing script: 76A914AA...
+    =============================   -----------------------------
+    Input 2                         Output 2
+      Value:          1               Value:          2
+      Issue ID:       2031d526...     Issue ID:       104cc329...
+      Issuing script: 76A914BB...     Issuing script: 76A914AA...
+    -----------------------------   =============================
+    Input 3                         Output 3
+      Value:          1               Value:          1
+      Issue ID:       2031d526...     Issue ID:       2031d526...
+      Issuing script: 76A914BB...     Issuing script: 76A914BB...
+    =============================   =============================
+    Input 4                         Fees
+      Value:          2               Value:          2
+      Issue ID:       <NULL>          Issue ID:       <NULL>
+      Issuing script: <NULL>          Issuing script: <NULL>
+    =============================   =============================
+
+The inputs are grouped in contiguous blocks of inputs having the same ''issue ID'':
+* The first two inputs form the first block, worth 4 Bitcoins and with the ''issue ID'' <code>104cc329...</code>.
+* The next two inputs form a second block worth 2 Bitcoins with the ''issue ID'' <code>2031d526...</code>.
+* The last input forms the third block worth 2 uncolored Bitcoins.
+
+A similar grouping process is now performed on outputs, trying to form blocks of the same size as the input blocks:
+* The first three inputs form the first block, worth 4 Bitcoins.
+* The output 3 is the second block, worth 2 Bitcoin.
+* Fees form the third block, worth 2 Bitcoins.
+
+The boundaries formed by inputs and outputs match, since both inputs and outputs have in the same order blocks worth 4 Bitcoins, 2 Bitcoins and 2 Bitcoins, so the transaction is a valid transfer transaction.
+
+The ''issue ID'' and ''issuing scripts'' are then sequentially carried from inputs to outputs:
+* The first block of 3 outputs receives ''issue ID'' <code>104cc329...</code> and ''issuing script'' <code>76A914AA...</code>, except output 0 (the marker output) since it has a value of zero.
+* Input 3 from the second block, receives ''issue ID'' <code>2031d526...</code> and ''issuing script'' <code>76A914BB...</code>.
+* Finally, fees remain uncolored.
+
+===Colored coins marker output===
+
+Transactions relevant to the Colored Coins Protocol contain a special output called the marker output. The marker output is an OP_RETURN output followed by a header. The contents of the marker header is described below.
 
 {|
 ! Field            !! Description !! Size
@@ -59,57 +165,7 @@ Transactions relevant to the Colored Coins Protocol contain a special output cal
 ! Transaction type || 1 to indicate an issue transaction, or 2 to indicate a transfer transaction. || 2 bytes
 |}
 
-===Issuing colored coins===
-
-Issuing new colored coins is done through a special transaction called issue transaction. The format of such transaction is described below:
-
-{|
-! Input/Output                     !! Description !! Color
-|-
-! Input 0                          || The output script referenced by this input becomes the logical color of the coins being issued. || The referenced output can be of any color.
-|-
-! Input 1+                         || Any other inputs. || The referenced outputs can be of any color.
-|-
-! Outputs before the marker output || Colored outputs. || Considered colored.
-|-
-! Marker output                    || This output is the [[#colored-coin-marker-output|marker output]], it uses the OP_RETURN operator. || The output is neither colored nor uncolored since it is not spendable.
-|-
-! Outputs after the marker output  || Outputs used for change. || Considered uncolored.
-|-
-! Fees                             || Transaction fees left for the miners. || Considered uncolored.
-|}
-
-The marker output acts as a separator between colored outputs, which are before the metadata container, and uncolored outputs, which are after.
-
-Colored outputs have the following characteristics:
-* Their '''physical color''' is the standard transaction hash of this transaction.
-* Their '''logical color''' is the output script referenced by the first input of this transaction.
-
-===Color transfer===
-
-Transfer transactions can then be used to transfer any amount of colored coin. A transfer transaction is constructed as follow:
-
-{|
-! Input/Output !! Description
-|-
-! Input 0+     || Each input can be of any color, or uncolored. They do not need to have all the same color.
-|-
-! Output 0     || This output is the [[#colored-coin-marker-output|marker output]], it uses the OP_RETURN operator.
-|-
-! Output 1+    || Colored outputs of the transaction.
-|-
-! Fees         || Transaction fees left for the miners. Considered uncolored.
-|}
-
-The [[#colored-coin-marker-output|marker output]] output uses the OP_RETURN operator to store data. It indicates to color-aware clients that this transaction is relevant for the Colored Coins Protocol.
-
-====Output coloring====
-
-The physical color of outputs are determined using a method called order based coloring.
-
-The algorithm works by coloring outputs in the same order as inputs are colored, taking values into account.
-
-The boundaries where an input of a physical color is followed by an input of different physical color should match boundaries between outputs. If any of the input boundary is not aligned with an output boundary, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored. Clients modified to support the Colored Coins Protocol should reject such transactions.
+Additional optional metadata can be appended after the header. Possible formats for this metadata are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
 ==Rationale==
 
@@ -120,10 +176,10 @@ This approach offers a number of desirable characteristics:
 # Colors are pseudonymous. They are represented by a transaction hash, which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
 # This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
-# Generating a color is as simple as generating an address, and can even be done offline.
+# Generating a reissuable color based on an ''issuing script'' is as simple as generating an address, and can even be done offline.
 # Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer keeps the matching private key.
-# Single-issue colors can be achieved by only using the physical color and ignoring the logical color.
-# Since logical colors are identified by an output script, it is possible to create a color that requires multiple signatures for issuance.
+# Single-issue colors can be achieved by only using the ''issue ID'' and ignoring the ''issuing script''.
+# Since ''issuing scripts'' are not limited to Pay-to-PubKey-Hash script but can be any script, it is possible to create a color that requires multiple signatures for issuance.
 
 ==Compatibility==
 
