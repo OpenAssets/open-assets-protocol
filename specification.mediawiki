@@ -14,23 +14,17 @@ Colored coins are initially issued using normal uncolored Bitcoins and marking t
 
 In the current Bitcoin implementation, outputs have an output script and a value. Colored Coin Protocol adds the ability to have a color component to each output.
 
-There are numerous applications to colored coins:
+There are many applications to colored coins:
 
-* A company might want to issue shares using colored coins, taking advantage of the Bitcoin infrastructure to allow people to maintain ownership of shares and trade shares, and even allow voting and pay dividends over the Bitcoin blockchain.
-
-* Smart property: suppose there is a car rental company. The company can release one colored coin to represent each car, and then configure the car to turn on only if it receives a message signed with the private key that currently owns the colored coin. It can then release a smartphone app that anyone can use to broadcast a message signed with their private key, and put up the colored coins on a trading platform. Anyone will be able to then purchase a colored coin, use the car for whatever period of time using the smartphone app as a "car key", and sell the coin again at their leisure.
-
-* A local community might wish to create a community currency, using the Bitcoin infrastructure to securely store funds.
-
-* A company may wish to create a corporate currency, such as Air Miles rewards points, or even plain coupons.
-
-* A bank might wish to release a coin to represent deposits, allowing people to trade, for example, "USD coins" or "gold coins".
+* A company could issue colored coins representing shares. The shares could then be traded fictionlessly through the Bitcoin infrastructure.
+* A bank could issue colored coins backed by a cash reserve. People could withdraw and deposit money in colored coins, and trade those, or use them to pay for goods and services. The Blockchain becomes a system allowing to transact not only in Bitcoin, but in any currency.
+* Locks on cars or houses could be associated to coins of a particular color. The door would only open when presented with a wallet containing a coin of that particular color.
 
 ==Protocol Overview==
 
 Each output in the Blockchain can either be uncolored, or be tagged with a color. The color of an output has two components: the ''issue ID'' and the ''issuing script''.
 
-The '''issue ID''' is the hash of the transaction that issued those colored coins. Coins with the same ''issue ID'' are interchangeable with each other, and they are in limited supply.
+The '''issue ID''' is the hash of the transaction that issued those colored coins. Coins with the same ''issue ID'' are interchangeable with each other. By construction, the supply of coins having a particular ''issue ID'' is fixed.
 
 The '''issuing script''' of an output is, by convention, the output script referenced by the first input of the issuing transaction. When the ''issue ID'' of an output is known, it is easy to find the ''issuing script'' by looking up the issuing transaction by hash, and examining the first input. The ''issuing script'' is a representation of who issued the coins. Coins that have the same ''issuing script'' cannot be mixed together unless they also have the same ''issue ID''. The issuer can reissue new coins having the same ''issuing script'' as long as they retain the private key required to redeem that script.
 
@@ -173,7 +167,7 @@ This approach offers a number of desirable characteristics:
 
 # Economical: Neither the genesis process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coins Protocol are identified by the special marker output.
-# Colors are pseudonymous. They are represented by a transaction hash, which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
+# Colors are pseudonymous. They are represented by a transaction hash (the ''issue ID'') or an output script (the ''issuing script''), which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
 # This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
 # Generating a reissuable color based on an ''issuing script'' is as simple as generating an address, and can even be done offline.
