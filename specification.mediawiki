@@ -22,18 +22,26 @@ There are many applications to colored coins:
 
 ==Protocol Overview==
 
-Each output in the Blockchain can either be uncolored, or be tagged with a color. The color of an output has two components: the ''issue ID'' and the ''issuing script''.
+Each output in the Blockchain can be either uncolored, or tagged with a color. The color of an output has two components: the ''source transaction'' and the ''source address''.
 
-The '''issue ID''' is the hash of the transaction that issued those colored coins. Coins with the same ''issue ID'' are interchangeable with each other. By construction, the supply of coins having a particular ''issue ID'' is fixed.
+The '''source transaction''' is the transaction that issued those colored coins. Coins from the same ''source transaction'' are interchangeable with each other. By construction, the supply of coins from a particular ''source transaction'' is fixed. The ''source transaction'' is referred to using its hash.
 
-The '''issuing script''' of an output is, by convention, the output script referenced by the first input of the issuing transaction. When the ''issue ID'' of an output is known, it is easy to find the ''issuing script'' by looking up the issuing transaction by hash, and examining the first input. The ''issuing script'' is a representation of who issued the coins. Coins that have the same ''issuing script'' cannot be mixed together unless they also have the same ''issue ID''. The issuer can reissue new coins having the same ''issuing script'' as long as they retain the private key required to redeem that script.
+The '''source address''' of an output is, by convention, the RIPEMD-160 hash of the output script referenced by the first input of the ''source transaction''. The ''source address'' is a representation of who issued the coins. Coins from the same ''source address'' cannot be mixed together unless they are also from the same ''source transaction''. The issuer can reissue new coins colored with the same ''source address'' as long as he retains the private key.
 
-In the typical use case, the ''issuing script'' would be a Pay-to-PubKey-Hash script. The issuer would create a script by generating an address and the matching private key. The private key is then used to issue coins with that particular ''issuing script''. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue coins with the same ''issuing script''.
+When represented in base-58, a ''source address'' must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of a ''source address'' therefore starts with a '3' in mainnet.
 
-When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. That contract can be defined at multiple levels:
-* At the issue level: the issuer would for example only commit to redeem coins issued by transactions listed on their website.
-* At the issuing script level: the issuer could commit to redeem any coin that has a particular ''issuing script''.
-* At an intermediate level: the issuer would commit to redeem coins that have a particular ''issuing script'', except if the issuing transaction appears on a list of repudiated issues.
+In the typical use case, the ''source address'' would be a hash of a Pay-to-PubKey-Hash script:
+# The issuer first generates a private key: <code>18E14A7B6A307F426A94F8114701E7C8E774E7F9A47E2C2035DB29A206321725</code>.
+# He calculates the corresponding address: <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
+# Next, he builds the Pay-to-PubKey-Hash script associated to that address: <code>OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG</code>.
+# He then hashes that script to obtain the ''source address'': <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>.
+
+The private key from the first step is required to issue coins colored with the ''source address'' <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue coins with the same ''source address''.
+
+When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. That contract can be defined at multiple levels. For example:
+* At the ''source transaction'' level: the issuer only commits to redeem coins issued by transactions listed on their website.
+* At the ''source address'' level: the issuer commits to redeem any coin from a particular ''source address''.
+* At an intermediate level: the issuer commits to redeem coins that have a particular ''source address'', except if the ''source transaction'' appears on a repudiation list.
 
 The Colored Coins Protocol uses two types of transactions: one to issue colored coins, and one to transfer colored coins. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
 
@@ -46,7 +54,7 @@ Issuing new colored coins is done through a special transaction called issue tra
 {|
 ! Input/Output                     !! Description !! Color
 |-
-! Input 0                          || The output script referenced by this input becomes the ''issuing script'' of the coins being issued. || The referenced output can be of any color.
+! Input 0                          || The output script referenced by this input can be hashed using RIPEMD-160 to obtain the ''source address'' of the coins being issued. || The referenced output can be of any color.
 |-
 ! Input 1+                         || Any other inputs. || The referenced outputs can be of any color.
 |-
@@ -62,8 +70,8 @@ Issuing new colored coins is done through a special transaction called issue tra
 The marker output acts as a separator between colored outputs, which are before the marker, and uncolored outputs, which are after.
 
 Colored outputs have the following characteristics:
-* Their '''issue ID''' is the standard transaction hash of this transaction.
-* Their '''issuing script''' is the output script referenced by the first input of this transaction.
+* This transaction becomes their '''source transaction'''.
+* Their '''source address''' is the RIPEMD-160 hash of the output script referenced by the first input of this transaction.
 
 ===Color transfer===
 
@@ -87,11 +95,11 @@ If an output has the value of zero satoshis (this can be the case for the marker
 
 ====Output coloring====
 
-The ''issue ID'' of outputs are determined using a method called order based coloring.
+The ''source transaction'' of outputs (and by extension their ''source address'') are determined using a method called order based coloring.
 
-The algorithm works by coloring outputs in the same order as inputs are colored, taking values into account. When an output is mapped to an input, the ''issue ID'' and ''issuing script'' of the output referenced by the input is carried to the output.
+The algorithm works by coloring outputs in the same order as inputs are colored, taking values into account. When an output is mapped to an input, the ''source transaction'' and ''source address'' of the output referenced by the input is carried to the output.
 
-The boundaries where an input with a particular ''issue ID'' is followed by an input with a different ''issue ID'' should match boundaries between outputs. If any of the input boundary is not aligned with an output boundary, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored. Fees must be paid using uncolored coins for the transaction to be valid, and must come from the last inputs.
+The boundaries where an input from a particular ''source transaction'' is followed by an input from a different ''source transaction'' should match boundaries between outputs. If any of the input boundary is not aligned with an output boundary, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored. Fees must be paid using uncolored coins for the transaction to be valid, and must come from the last inputs.
 
 Clients modified to support the Colored Coins Protocol should reject transfer transactions that do not follow those rules.
 
@@ -99,36 +107,36 @@ Clients modified to support the Colored Coins Protocol should reject transfer tr
 
 This is an example of a valid transfer transaction:
 
-    =============================   =============================
-    Input 0                         Output 0 - Marker output
-      Value:          1               Value:          0
-      Issue ID:       104cc329...     Issue ID:       <NULL>
-      Issuing script: 76A914AA...     Issuing script: <NULL>
-    -----------------------------   -----------------------------
-    Input 1                         Output 1
-      Value:          3               Value:          2
-      Issue ID:       104cc329...     Issue ID:       104cc329...
-      Issuing script: 76A914AA...     Issuing script: 76A914AA...
-    =============================   -----------------------------
-    Input 2                         Output 2
-      Value:          1               Value:          2
-      Issue ID:       2031d526...     Issue ID:       104cc329...
-      Issuing script: 76A914BB...     Issuing script: 76A914AA...
-    -----------------------------   =============================
-    Input 3                         Output 3
-      Value:          1               Value:          1
-      Issue ID:       2031d526...     Issue ID:       2031d526...
-      Issuing script: 76A914BB...     Issuing script: 76A914BB...
-    =============================   =============================
-    Input 4                         Fees
-      Value:          2               Value:          2
-      Issue ID:       <NULL>          Issue ID:       <NULL>
-      Issuing script: <NULL>          Issuing script: <NULL>
-    =============================   =============================
+    =================================   =================================
+    Input 0                             Output 0 - Marker output
+      Value:              1               Value:              0
+      Source Transaction: 104cc329...     Source Transaction: <NULL>
+      Source Address:     3o1B7Ngv...     Source Address:     <NULL>
+    ---------------------------------   ---------------------------------
+    Input 1                             Output 1
+      Value:              3               Value:              2
+      Source Transaction: 104cc329...     Source Transaction: 104cc329...
+      Source Address:     3o1B7Ngv...     Source Address:     3o1B7Ngv...
+    =================================   ---------------------------------
+    Input 2                             Output 2
+      Value:              1               Value:              2
+      Source Transaction: 2031d526...     Source Transaction: 104cc329...
+      Source Address:     3Q2V2xuz...     Source Address:     3o1B7Ngv...
+    ---------------------------------   =================================
+    Input 3                             Output 3
+      Value:              1               Value:              1
+      Source Transaction: 2031d526...     Source Transaction: 2031d526...
+      Source Address:     3Q2V2xuz...     Source Address:     3Q2V2xuz...
+    =================================   =================================
+    Input 4                             Fees
+      Value:              2               Value:              2
+      Source Transaction: <NULL>          Source Transaction: <NULL>
+      Source Address:     <NULL>          Source Address:     <NULL>
+    =================================   =================================
 
-The inputs are grouped in contiguous blocks of inputs having the same ''issue ID'':
-* The first two inputs form the first block, worth 4 Bitcoins and with the ''issue ID'' <code>104cc329...</code>.
-* The next two inputs form a second block worth 2 Bitcoins with the ''issue ID'' <code>2031d526...</code>.
+The inputs are grouped in contiguous blocks of inputs from the same ''source transaction'':
+* The first two inputs form the first block, worth 4 Bitcoins and with the ''source transaction'' <code>104cc329...</code>.
+* The next two inputs form a second block worth 2 Bitcoins with the ''source transaction'' <code>2031d526...</code>.
 * The last input forms the third block worth 2 uncolored Bitcoins.
 
 A similar grouping process is now performed on outputs, trying to form blocks of the same size as the input blocks:
@@ -138,9 +146,9 @@ A similar grouping process is now performed on outputs, trying to form blocks of
 
 The boundaries formed by inputs and outputs match, since both inputs and outputs have in the same order blocks worth 4 Bitcoins, 2 Bitcoins and 2 Bitcoins, so the transaction is a valid transfer transaction.
 
-The ''issue ID'' and ''issuing scripts'' are then sequentially carried from inputs to outputs:
-* The first block of 3 outputs receives ''issue ID'' <code>104cc329...</code> and ''issuing script'' <code>76A914AA...</code>, except output 0 (the marker output) since it has a value of zero.
-* Input 3 from the second block, receives ''issue ID'' <code>2031d526...</code> and ''issuing script'' <code>76A914BB...</code>.
+The ''source transaction'' and ''source address'' are then sequentially carried from inputs to outputs:
+* As part of the first block, the first three outputs become colored with a ''source transaction'' <code>104cc329...</code> and a ''source address'' <code>3o1B7Ngv...</code>, except output 0 (the marker output) since it has a value of zero.
+* Input 3 from the second block, becomes colored with the ''source transaction'' <code>2031d526...</code> and the ''source address'' <code>3Q2V2xuz...</code>.
 * Finally, fees remain uncolored.
 
 ===Colored coins marker output===
@@ -165,15 +173,15 @@ Additional optional metadata can be appended after the header. Possible formats 
 
 This approach offers a number of desirable characteristics:
 
-# Economical: Neither the genesis process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
+# Economical: Neither the issuance process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coins Protocol are identified by the special marker output.
-# Colors are pseudonymous. They are represented by a transaction hash (the ''issue ID'') or an output script (the ''issuing script''), which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
+# Colors are pseudonymous. They are represented by a transaction hash (the ''source transaction'') and/or an address (the ''source address''), which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
 # This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
-# Generating a reissuable color based on an ''issuing script'' is as simple as generating an address, and can even be done offline.
+# Generating a reissuable color based on a ''source address'' is as simple as generating an address, and can even be done offline.
 # Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer keeps the matching private key.
-# Single-issue colors can be achieved by only using the ''issue ID'' and ignoring the ''issuing script''.
-# Since ''issuing scripts'' are not limited to Pay-to-PubKey-Hash script but can be any script, it is possible to create a color that requires multiple signatures for issuance.
+# Single-issue colors can be achieved by only using the ''source transaction'' and ignoring the ''source address''.
+# Since output scripts are not limited to Pay-to-PubKey-Hash script but can be any script, it is possible to create a color represented by a ''source address'' that requires multiple signatures for issuance.
 
 ==Compatibility==
 
