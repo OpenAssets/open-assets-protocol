@@ -26,7 +26,7 @@ Each output in the Blockchain can be either uncolored, or tagged with a color. T
 
 The '''source transaction''' is the transaction that issued those colored coins. Coins from the same ''source transaction'' are interchangeable with each other. By construction, the supply of coins from a particular ''source transaction'' is fixed. The ''source transaction'' is referred to using its hash.
 
-The '''source address''' of an output is, by convention, the RIPEMD-160 hash of the output script referenced by the first input of the ''source transaction''. The ''source address'' is a representation of who issued the coins. Coins from the same ''source address'' cannot be mixed together unless they are also from the same ''source transaction''. The issuer can reissue new coins colored with the same ''source address'' as long as he retains the private key.
+The '''source address''' of an output is, by convention, the RIPEMD-160 hash of the output script referenced by the first input of the ''source transaction''. The ''source address'' is a representation of who issued the coins. Coins from the same ''source address'' cannot be mixed together unless they are also from the same ''source transaction''. The issuer can reissue new coins colored with the same ''source address'' as long as they retain the private key.
 
 When represented in base-58, a ''source address'' must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of a ''source address'' therefore starts with a '3' in mainnet.
 
@@ -41,7 +41,7 @@ The private key from the first step is required to issue coins colored with the 
 When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. That contract can be defined at multiple levels. For example:
 * At the ''source transaction'' level: the issuer only commits to redeem coins issued by transactions listed on their website.
 * At the ''source address'' level: the issuer commits to redeem any coin from a particular ''source address''.
-* At an intermediate level: the issuer commits to redeem coins that have a particular ''source address'', except if the ''source transaction'' appears on a repudiation list.
+* At an intermediate level: the issuer commits to redeem coins from a particular ''source address'', except if their ''source transaction'' appears on a repudiation list.
 
 The Colored Coins Protocol uses two types of transactions: one to issue colored coins, and one to transfer colored coins. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
 
@@ -60,7 +60,7 @@ Issuing new colored coins is done through a special transaction called issue tra
 |-
 ! Outputs before the marker output || Colored outputs. || Considered colored.
 |-
-! Marker output                    || This output is the [[#colored-coins-marker-output|marker output]], it uses the OP_RETURN operator. || The output is neither colored nor uncolored since it is not spendable.
+! Marker output                    || This output is the [[#colored-coins-marker-output|marker output]], it uses the OP_RETURN operator. || Considered uncolored.
 |-
 ! Outputs after the marker output  || Outputs used for change. || Considered uncolored.
 |-
@@ -135,8 +135,8 @@ This is an example of a valid transfer transaction:
     =================================   =================================
 
 The inputs are grouped in contiguous blocks of inputs from the same ''source transaction'':
-* The first two inputs form the first block, worth 4 Bitcoins and with the ''source transaction'' <code>104cc329...</code>.
-* The next two inputs form a second block worth 2 Bitcoins with the ''source transaction'' <code>2031d526...</code>.
+* The first two inputs form the first block, worth 4 Bitcoins, all issued by transaction <code>104cc329...</code>.
+* The next two inputs form a second block worth 2 Bitcoins, all issued by transaction <code>2031d526...</code>.
 * The last input forms the third block worth 2 uncolored Bitcoins.
 
 A similar grouping process is now performed on outputs, trying to form blocks of the same size as the input blocks:
@@ -146,14 +146,14 @@ A similar grouping process is now performed on outputs, trying to form blocks of
 
 The boundaries formed by inputs and outputs match, since both inputs and outputs have in the same order blocks worth 4 Bitcoins, 2 Bitcoins and 2 Bitcoins, so the transaction is a valid transfer transaction.
 
-The ''source transaction'' and ''source address'' are then sequentially carried from inputs to outputs:
+The ''source transaction'' and ''source address'' are then sequentially carried over from inputs to outputs:
 * As part of the first block, the first three outputs become colored with a ''source transaction'' <code>104cc329...</code> and a ''source address'' <code>3o1B7Ngv...</code>, except output 0 (the marker output) since it has a value of zero.
 * Input 3 from the second block, becomes colored with the ''source transaction'' <code>2031d526...</code> and the ''source address'' <code>3Q2V2xuz...</code>.
 * Finally, fees remain uncolored.
 
 ===Colored coins marker output===
 
-Transactions relevant to the Colored Coins Protocol contain a special output called the marker output. The marker output is an OP_RETURN output followed by a header. The contents of the marker header is described below.
+Transactions relevant to the Colored Coins Protocol contain a special output called the marker output. The marker output is an OP_RETURN output followed by a header. The contents of the marker header are described below.
 
 {|
 ! Field            !! Description !! Size
@@ -168,6 +168,10 @@ Transactions relevant to the Colored Coins Protocol contain a special output cal
 |}
 
 Additional optional metadata can be appended after the header. Possible formats for this metadata are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
+
+Essentially, in this version of the protocol, the marker output must start with:
+* <code>0x084343500001000100</code> for an issue transaction.
+* <code>0x084343500001000200</code> for a transfer transaction.
 
 ==Rationale==
 
