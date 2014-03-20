@@ -1,6 +1,6 @@
 <pre>
   Title: Colored Coin Protocol (CCP/1.0)
-  Author: Flavien Charlon <flavien.charlon@pixode.net>
+  Author: Flavien Charlon <flavien.charlon@coinprism.com>
   Created: 12-12-2013
 </pre>
 
@@ -16,7 +16,7 @@ In the current Bitcoin implementation, outputs have an output script and a value
 
 There are many applications to colored coins:
 
-* A company could issue colored coins representing shares. The shares could then be traded fictionlessly through the Bitcoin infrastructure.
+* A company could issue colored coins representing shares. The shares could then be traded frictionlessly through the Bitcoin infrastructure.
 * A bank could issue colored coins backed by a cash reserve. People could withdraw and deposit money in colored coins, and trade those, or use them to pay for goods and services. The Blockchain becomes a system allowing to transact not only in Bitcoin, but in any currency.
 * Locks on cars or houses could be associated to coins of a particular color. The door would only open when presented with a wallet containing a coin of that particular color.
 
@@ -124,7 +124,7 @@ This is an example of a valid transfer transaction:
       Source Address:     3Q2V2xuz...     Source Address:     3o1B7Ngv...
     ---------------------------------   =================================
     Input 3                             Output 3
-      Value:              1               Value:              1
+      Value:              1               Value:              2
       Source Transaction: 2031d526...     Source Transaction: 2031d526...
       Source Address:     3Q2V2xuz...     Source Address:     3Q2V2xuz...
     =================================   =================================
