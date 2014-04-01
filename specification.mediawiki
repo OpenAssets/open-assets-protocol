@@ -97,59 +97,79 @@ If an output has the value of zero satoshis (this can be the case for the marker
 
 The ''source transaction'' of outputs (and by extension their ''source address'') are determined using a method called order based coloring.
 
-The algorithm works by coloring outputs in the same order as inputs are colored, taking values into account. When an output is mapped to an input, the ''source transaction'' and ''source address'' of the output referenced by the input is carried to the output.
+First, groups of inputs and outputs are formed. In each group, the total value of inputs must be equal to the total value of outputs. Inputs and outputs within a group must be consecutive. The algorithm used to build the groups is the following:
 
-The boundaries where an input from a particular ''source transaction'' is followed by an input from a different ''source transaction'' should match boundaries between outputs. If any of the input boundary is not aligned with an output boundary, the transaction is deemed invalid according to the Colored Coins Protocol, and all the outputs are considered uncolored. Fees must be paid using uncolored coins for the transaction to be valid, and must come from the last inputs.
+    1. Initialization:
+       - If the transaction is paying fees, fees are treated like an imaginary last output for the
+         purpose of constructing the groups.
+       - The current input is input 0, and the current output is output 0.
+       - Start a new empty group.
+    2. If the total value of inputs in the group is less than the total value of outputs in the group:
+         Add the current input to the current group.
+         Move the current input to next input.
+       Else:
+         Add the current output to the current group.
+         Move the current output to next output.
+    3. If the total value of inputs in the group equals the total value of outputs in the group:
+         Add the current group to the list of completed groups, and start a new empty group.
+    4. If the current input has reached the end of all available inputs and the current output has
+       reached the end of all available outputs (including fees):
+         Exit.
+       Else:
+         Go back to step 2.
 
-Clients modified to support the Colored Coins Protocol should reject transfer transactions that do not follow those rules.
+After the groups have been constructed, the colors of the outputs within each group is computed from the colors of the inputs within that group. If the inputs of a group are all from the same ''source transaction'', the outputs of that group are all colored with this ''source transaction''. If the inputs have mixed ''source transactions'' or any input in the group is uncolored, the outputs of that group are all uncolored. Outputs with a value of 0 are always considered uncolored.
+
+Even if fees are paid from a group of colored inputs, fees received by miners are uncolored.
 
 ====Example====
 
-This is an example of a valid transfer transaction:
+This is an example of a transfer transaction:
 
-    =================================   =================================
-    Input 0                             Output 0 - Marker output
-      Value:              1               Value:              0
-      Source Transaction: 104cc329...     Source Transaction: <NULL>
-      Source Address:     3o1B7Ngv...     Source Address:     <NULL>
-    ---------------------------------   ---------------------------------
-    Input 1                             Output 1
-      Value:              3               Value:              2
-      Source Transaction: 104cc329...     Source Transaction: 104cc329...
-      Source Address:     3o1B7Ngv...     Source Address:     3o1B7Ngv...
-    =================================   ---------------------------------
-    Input 2                             Output 2
-      Value:              1               Value:              2
-      Source Transaction: 2031d526...     Source Transaction: 104cc329...
-      Source Address:     3Q2V2xuz...     Source Address:     3o1B7Ngv...
-    ---------------------------------   =================================
-    Input 3                             Output 3
-      Value:              1               Value:              2
-      Source Transaction: 2031d526...     Source Transaction: 2031d526...
-      Source Address:     3Q2V2xuz...     Source Address:     3Q2V2xuz...
-    =================================   =================================
-    Input 4                             Fees
-      Value:              2               Value:              2
-      Source Transaction: <NULL>          Source Transaction: <NULL>
-      Source Address:     <NULL>          Source Address:     <NULL>
-    =================================   =================================
+    =============================   =============================
+    Input 0                         Output 0 - Marker output
+      Value:              1           Value:              0
+      Source Transaction: T1          Source Transaction: <NULL>
+      Source Address:     A1          Source Address:     <NULL>
+    -----------------------------   -----------------------------
+    Input 1                         Output 1
+      Value:              3           Value:              2
+      Source Transaction: T1          Source Transaction: T1
+      Source Address:     A1          Source Address:     A1
+    =============================   -----------------------------
+    Input 2                         Output 2
+      Value:              1           Value:              2
+      Source Transaction: T1          Source Transaction: T1
+      Source Address:     A1          Source Address:     A1
+    -----------------------------   =============================
+    Input 3                         Output 3
+      Value:              1           Value:              2
+      Source Transaction: T2          Source Transaction: <NULL>
+      Source Address:     A2          Source Address:     <NULL>
+    =============================   =============================
+    Input 4                         Output 4
+      Value:              2           Value:              3
+      Source Transaction: T2          Source Transaction: T2
+      Source Address:     A2          Source Address:     A2
+    -----------------------------   -----------------------------
+    Input 5                         Fees
+      Value:              2           Value:              1
+      Source Transaction: T2          Source Transaction: <NULL>
+      Source Address:     A2          Source Address:     <NULL>
+    =============================   =============================
 
-The inputs are grouped in contiguous blocks of inputs from the same ''source transaction'':
-* The first two inputs form the first block, worth 4 Bitcoins, all issued by transaction <code>104cc329...</code>.
-* The next two inputs form a second block worth 2 Bitcoins, all issued by transaction <code>2031d526...</code>.
-* The last input forms the third block worth 2 uncolored Bitcoins.
+Groups are constructed so that they have the same total value and are in the same order. An imaginary output is added as the last output to account for fees (1 Bitcoin).
 
-A similar grouping process is now performed on outputs, trying to form blocks of the same size as the input blocks:
-* The first three inputs form the first block, worth 4 Bitcoins.
-* The output 3 is the second block, worth 2 Bitcoin.
-* Fees form the third block, worth 2 Bitcoins.
-
-The boundaries formed by inputs and outputs match, since both inputs and outputs have in the same order blocks worth 4 Bitcoins, 2 Bitcoins and 2 Bitcoins, so the transaction is a valid transfer transaction.
-
-The ''source transaction'' and ''source address'' are then sequentially carried over from inputs to outputs:
-* As part of the first block, the first three outputs become colored with a ''source transaction'' <code>104cc329...</code> and a ''source address'' <code>3o1B7Ngv...</code>, except output 0 (the marker output) since it has a value of zero.
-* Input 3 from the second block, becomes colored with the ''source transaction'' <code>2031d526...</code> and the ''source address'' <code>3Q2V2xuz...</code>.
-* Finally, fees remain uncolored.
+Three groups can be constructed:
+* Inputs 0 and 1 and outputs 0, 1 and 2 form the first group.
+** The total value of that group is 4 Bitcoin.
+** Inputs 0 and 1 are from the same ''source transaction'' <code>T1</code>, so outputs 1 and 2 are colored with ''source transaction'' <code>T1</code> and ''source address'' <code>A1</code>. Output 0 has a value of 0, so it is uncolored.
+* Inputs 2 and 3 and output 3 form the second group. 
+** The total value of that group is 2 Bitcoin.
+** Input 2 is from ''source transaction'' <code>T1</code> and input 3 is from ''source transaction'' <code>T2</code>. Because they are different, output 3 is uncolored.
+* Inputs 4 and 5, output 4 and the fees form the third group.
+** The total value of that group is 4 Bitcoin.
+** Inputs 4 and 5 are from the same ''source transaction'' <code>T2</code>, so output 4 is colored with ''source transaction'' <code>T2</code> and ''source address'' <code>A2</code>. Fees are always uncolored.
 
 ===Colored coins marker output===
 
