@@ -91,36 +91,17 @@ Transfer transactions are used to send colored and uncolored coins. A transfer t
 
 The [[#colored-coins-marker-output|marker output]] output uses the OP_RETURN operator to store data. It indicates to color-aware clients that this transaction is relevant for the Colored Coins Protocol.
 
-If an output has the value of zero satoshis (this can be the case for the marker output), it is considered uncolored.
-
 ====Output coloring====
 
 The ''source transaction'' of outputs (and by extension their ''source address'') are determined using a method called order based coloring.
 
-First, groups of inputs and outputs are formed. In each group, the total value of inputs must be equal to the total value of outputs. Inputs and outputs within a group must be consecutive. The algorithm used to build the groups is the following:
+Inputs are seen as a sequence of colored and uncolored satoshis. Similarly, outputs are seen as a sequence of satoshis to be colored. These two sequences are built by taking each input or output in order, each of them adding to the sequence as many satoshis as their value. If the transaction is paying fees, fees are treated like an imaginary last output for the purpose of constructing the output sequence.
 
-    1. Initialization:
-       - If the transaction is paying fees, fees are treated like an imaginary last output for the
-         purpose of constructing the groups.
-       - The current input is input 0, and the current output is output 0.
-       - Start a new empty group.
-    2. If the total value of inputs in the group is less than the total value of outputs in the group:
-         Add the current input to the current group.
-         Move the current input to next input.
-       Else:
-         Add the current output to the current group.
-         Move the current output to next output.
-    3. If the total value of inputs in the group equals the total value of outputs in the group:
-         Add the current group to the list of completed groups, and start a new empty group.
-    4. If the current input has reached the end of all available inputs and the current output has
-       reached the end of all available outputs (including fees):
-         Exit.
-       Else:
-         Go back to step 2.
+After the sequences have been built, the ''source transaction'' of every satoshi in the input sequence is assigned to the satoshi at the same position in the output sequence.
 
-After the groups have been constructed, the colors of the outputs within each group is computed from the colors of the inputs within that group. If the inputs of a group are all from the same ''source transaction'', the outputs of that group are all colored with this ''source transaction''. If the inputs have mixed ''source transactions'' or any input in the group is uncolored, the outputs of that group are all uncolored. Outputs with a value of 0 are always considered uncolored.
+Finally, for every output, if the satoshis forming that output are all from the same ''source transaction'', the output is considered colored with that ''source transaction''. If the output contains satoshis from more than one ''source transactions'', or uncolored satoshis, the output is considered uncolored. If an output has a value of zero satoshis (this can be the case for the marker output), it is considered uncolored.
 
-Even if fees are paid from a group of colored inputs, fees received by miners are uncolored.
+Even if fees are paid from colored satoshis, fees received by miners are always uncolored.
 
 ====Example====
 
@@ -128,48 +109,55 @@ This is an example of a transfer transaction:
 
     =============================   =============================
     Input 0                         Output 0 - Marker output
-      Value:              1           Value:              0
+      Value:              3           Value:              0
       Source Transaction: T1          Source Transaction: <NULL>
       Source Address:     A1          Source Address:     <NULL>
     -----------------------------   -----------------------------
     Input 1                         Output 1
-      Value:              3           Value:              2
+      Value:              2           Value:              6
       Source Transaction: T1          Source Transaction: T1
       Source Address:     A1          Source Address:     A1
-    =============================   -----------------------------
-    Input 2                         Output 2
-      Value:              1           Value:              2
-      Source Transaction: T1          Source Transaction: T1
-      Source Address:     A1          Source Address:     A1
-    -----------------------------   =============================
-    Input 3                         Output 3
-      Value:              1           Value:              2
-      Source Transaction: T2          Source Transaction: <NULL>
-      Source Address:     A2          Source Address:     <NULL>
-    =============================   =============================
-    Input 4                         Output 4
-      Value:              2           Value:              3
-      Source Transaction: T2          Source Transaction: T2
-      Source Address:     A2          Source Address:     A2
     -----------------------------   -----------------------------
-    Input 5                         Fees
-      Value:              2           Value:              1
+    Input 2                         Output 2
+      Value:              5           Value:              4
+      Source Transaction: T1          Source Transaction: T1
+      Source Address:     A1          Source Address:     A1
+    -----------------------------   -----------------------------
+    Input 3                         Output 3
+      Value:              7           Value:              7
+      Source Transaction: <NULL>     Source Transaction: <NULL>
+      Source Address:     <NULL>     Source Address:     <NULL>
+    -----------------------------   -----------------------------
+    Input 4                         Output 4
+      Value:              6           Value:              4
+      Source Transaction: T1          Source Transaction: T1
+      Source Address:     A1          Source Address:     A1
+    -----------------------------   -----------------------------
+    Input 5                         Output 5
+      Value:              8           Value:              3
       Source Transaction: T2          Source Transaction: <NULL>
       Source Address:     A2          Source Address:     <NULL>
-    =============================   =============================
+    =============================   -----------------------------
+                                    Output 6
+                                      Value:              6
+                                      Source Transaction: T2
+                                      Source Address:     A2
+                                    -----------------------------
+                                    Fees
+                                      Value:              1
+                                      Source Transaction: <NULL>
+                                      Source Address:     <NULL>
+                                    =============================
 
-Groups are constructed so that they have the same total value and are in the same order. An imaginary output is added as the last output to account for fees (1 Bitcoin).
-
-Three groups can be constructed:
-* Inputs 0 and 1 and outputs 0, 1 and 2 form the first group.
-** The total value of that group is 4 Bitcoin.
-** Inputs 0 and 1 are from the same ''source transaction'' <code>T1</code>, so outputs 1 and 2 are colored with ''source transaction'' <code>T1</code> and ''source address'' <code>A1</code>. Output 0 has a value of 0, so it is uncolored.
-* Inputs 2 and 3 and output 3 form the second group. 
-** The total value of that group is 2 Bitcoin.
-** Input 2 is from ''source transaction'' <code>T1</code> and input 3 is from ''source transaction'' <code>T2</code>. Because they are different, output 3 is uncolored.
-* Inputs 4 and 5, output 4 and the fees form the third group.
-** The total value of that group is 4 Bitcoin.
-** Inputs 4 and 5 are from the same ''source transaction'' <code>T2</code>, so output 4 is colored with ''source transaction'' <code>T2</code> and ''source address'' <code>A2</code>. Fees are always uncolored.
+Outputs are colored from the first to the last:
+* Output 0 has a value of zero satoshis, so it is uncolored.
+* Output 1 receives 3 satoshis from input 0, 2 satoshis from input 1 and 1 satoshi from input 2. They are all from ''source transaction'' <code>T1</code>, so output 1 becomes colored with ''source transaction'' <code>T1</code>.
+* Output 2 receives the remaining 4 satoshis of input 2. Input 2 is from ''source transaction'' <code>T1</code> so output 2 becomes colored with ''source transaction'' <code>T1</code>.
+* Output 3 receives the 7 satoshis of input 3. Input 3 is uncolored so output 3 remains uncolored.
+* Output 4 receives the first 4 satoshis of input 4. Input 4 is from ''source transaction'' <code>T1</code> so output 4 becomes colored with ''source transaction'' <code>T1</code>.
+* Output 5 receives the remaining 2 satoshis of input 4, and 1 satoshi from input 5. Because input 4 and input 5 have different source transactions, output 5 is uncolored.
+* Output 6 receives the next 6 satoshis of input 5. Input 5 is from ''source transaction'' <code>T2</code> so output 6 becomes colored with ''source transaction'' <code>T2</code>.
+* Fees come from the last satoshi of input 5, but they are always uncolored.
 
 ===Colored coins marker output===
 
@@ -200,7 +188,7 @@ This approach offers a number of desirable characteristics:
 # Economical: Neither the issuance process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coins Protocol are identified by the special marker output.
 # Colors are pseudonymous. They are represented by a transaction hash (the ''source transaction'') and/or an address (the ''source address''), which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
-# This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
+# This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO. Also, the protocol is very light in metadata and only embeds 9 bytes in each transaction (the marker output).
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
 # Generating a reissuable color based on a ''source address'' is as simple as generating an address, and can even be done offline.
 # Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer keeps the matching private key.
