@@ -8,7 +8,7 @@
 
 This document describes a protocol used for coloring outputs in the Blockchain.
 
-Colored coins are initially issued using normal uncolored Bitcoins and marking them with a color. They can then be transferred using transactions that preserve the amount of coins of every color.
+Colored coins are initially issued by taking normal uncolored Bitcoins and marking them with a color. When an issuer issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. Colored coins can then be transferred using transactions that preserve the amount of coins of every color.
 
 ==Motivation==
 
@@ -22,26 +22,19 @@ There are many applications to colored coins:
 
 ==Protocol Overview==
 
-Each output in the Blockchain can be either uncolored, or tagged with a color. The color of an output has two components: the ''source transaction'' and the ''source address''.
+Each output in the Blockchain can be either uncolored, or tagged with a color. The color of an output is represented by a Pay-to-Script-Hash address called the '''source address'''.
 
-The '''source transaction''' is the transaction that issued those colored coins. Coins from the same ''source transaction'' are interchangeable with each other. By construction, the supply of coins from a particular ''source transaction'' is fixed. The ''source transaction'' is referred to using its hash.
+The source address of an output is the RIPEMD-160 hash of the output script referenced by the first input of the transaction that issued those colored coins. Coins from the same source address are interchangeable with each other. An issuer can reissue new coins from the same source address as long as they retain the private key.
 
-The '''source address''' of an output is, by convention, the RIPEMD-160 hash of the output script referenced by the first input of the ''source transaction''. The ''source address'' is a representation of who issued the coins. Coins from the same ''source address'' cannot be mixed together unless they are also from the same ''source transaction''. The issuer can reissue new coins colored with the same ''source address'' as long as they retain the private key.
+When represented in base-58, a source address must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of a source address therefore starts with a '3' in mainnet.
 
-When represented in base-58, a ''source address'' must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of a ''source address'' therefore starts with a '3' in mainnet.
-
-In the typical use case, the ''source address'' would be a hash of a Pay-to-PubKey-Hash script:
+The process to generate a source address and the matching private key is described in the following example:
 # The issuer first generates a private key: <code>18E14A7B6A307F426A94F8114701E7C8E774E7F9A47E2C2035DB29A206321725</code>.
 # He calculates the corresponding address: <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
 # Next, he builds the Pay-to-PubKey-Hash script associated to that address: <code>OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG</code>.
-# He then hashes that script to obtain the ''source address'': <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>.
+# Finally, he hashes that script to obtain the source address: <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>.
 
-The private key from the first step is required to issue coins colored with the ''source address'' <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue coins with the same ''source address''.
-
-When somebody issues colored coins, he typically associates them with a formal or informal promise that he will redeem the coins according to terms he has defined. That contract can be defined at multiple levels. For example:
-* At the ''source transaction'' level: the issuer only commits to redeem coins issued by transactions listed on their website.
-* At the ''source address'' level: the issuer commits to redeem any coin from a particular ''source address''.
-* At an intermediate level: the issuer commits to redeem coins from a particular ''source address'', except if their ''source transaction'' appears on a repudiation list.
+The private key from the first step is required to issue coins colored with source address <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue coins with that specific source address.
 
 The Colored Coins Protocol uses two types of transactions: one to issue colored coins, and one to transfer colored coins. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
 
@@ -49,12 +42,12 @@ The Colored Coins Protocol uses two types of transactions: one to issue colored 
 
 ===Issuing colored coins===
 
-Issuing new colored coins is done through a special transaction called issue transaction. The format of such transaction is described below:
+Issuing new colored coins is done through a special transaction called issuance transaction. The format of such transaction is described below:
 
 {|
 ! Input/Output                     !! Description !! Color
 |-
-! Input 0                          || The output script referenced by this input can be hashed using RIPEMD-160 to obtain the ''source address'' of the coins being issued. || The referenced output can be of any color.
+! Input 0                          || The output script referenced by this input can be hashed with RIPEMD-160 to obtain the source address of the coins being issued. || The referenced output can be of any color.
 |-
 ! Input 1+                         || Any other inputs. || The referenced outputs can be of any color.
 |-
@@ -67,11 +60,7 @@ Issuing new colored coins is done through a special transaction called issue tra
 ! Fees                             || Transaction fees left for the miners. || Considered uncolored.
 |}
 
-The marker output acts as a separator between colored outputs, which are before the marker, and uncolored outputs, which are after.
-
-Colored outputs have the following characteristics:
-* This transaction becomes their '''source transaction'''.
-* Their '''source address''' is the RIPEMD-160 hash of the output script referenced by the first input of this transaction.
+Outputs preceding the marker output are colored with the source address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction.
 
 ===Color transfer===
 
@@ -93,13 +82,13 @@ The [[#colored-coins-marker-output|marker output]] output uses the OP_RETURN ope
 
 ====Output coloring====
 
-The ''source transaction'' of outputs (and by extension their ''source address'') are determined using a method called order based coloring.
+The source addresses of outputs are determined using a method called order-based coloring.
 
 Inputs are seen as a sequence of colored and uncolored satoshis. Similarly, outputs are seen as a sequence of satoshis to be colored. These two sequences are built by taking each input or output in order, each of them adding to the sequence as many satoshis as their value. If the transaction is paying fees, fees are treated like an imaginary last output for the purpose of constructing the output sequence.
 
-After the sequences have been built, the ''source transaction'' of every satoshi in the input sequence is assigned to the satoshi at the same position in the output sequence.
+After the sequences have been built, the source address of every satoshi in the input sequence is assigned to the satoshi at the same position in the output sequence.
 
-Finally, for every output, if the satoshis forming that output are all from the same ''source transaction'', the output is considered colored with that ''source transaction''. If the output contains satoshis from more than one ''source transactions'', or uncolored satoshis, the output is considered uncolored. If an output has a value of zero satoshis (this can be the case for the marker output), it is considered uncolored.
+Finally, for every output, if the satoshis forming that output are all from the same source address, the output is considered colored with that source address. If the output contains satoshis from more than one source address, or uncolored satoshis, the output is considered uncolored. If an output has a value of zero satoshis (this can be the case for the marker output), it is considered uncolored.
 
 Even if fees are paid from colored satoshis, fees received by miners are always uncolored.
 
@@ -110,53 +99,45 @@ This is an example of a transfer transaction:
     =============================   =============================
     Input 0                         Output 0 - Marker output
       Value:              3           Value:              0
-      Source Transaction: T1          Source Transaction: <NULL>
       Source Address:     A1          Source Address:     <NULL>
     -----------------------------   -----------------------------
     Input 1                         Output 1
       Value:              2           Value:              6
-      Source Transaction: T1          Source Transaction: T1
       Source Address:     A1          Source Address:     A1
     -----------------------------   -----------------------------
     Input 2                         Output 2
       Value:              5           Value:              4
-      Source Transaction: T1          Source Transaction: T1
       Source Address:     A1          Source Address:     A1
     -----------------------------   -----------------------------
     Input 3                         Output 3
       Value:              7           Value:              7
-      Source Transaction: <NULL>     Source Transaction: <NULL>
       Source Address:     <NULL>     Source Address:     <NULL>
     -----------------------------   -----------------------------
     Input 4                         Output 4
       Value:              6           Value:              4
-      Source Transaction: T1          Source Transaction: T1
       Source Address:     A1          Source Address:     A1
     -----------------------------   -----------------------------
     Input 5                         Output 5
       Value:              8           Value:              3
-      Source Transaction: T2          Source Transaction: <NULL>
       Source Address:     A2          Source Address:     <NULL>
     =============================   -----------------------------
                                     Output 6
                                       Value:              6
-                                      Source Transaction: T2
                                       Source Address:     A2
                                     -----------------------------
                                     Fees
                                       Value:              1
-                                      Source Transaction: <NULL>
                                       Source Address:     <NULL>
                                     =============================
 
 Outputs are colored from the first to the last:
 * Output 0 has a value of zero satoshis, so it is uncolored.
-* Output 1 receives 3 satoshis from input 0, 2 satoshis from input 1 and 1 satoshi from input 2. They are all from ''source transaction'' <code>T1</code>, so output 1 becomes colored with ''source transaction'' <code>T1</code>.
-* Output 2 receives the remaining 4 satoshis of input 2. Input 2 is from ''source transaction'' <code>T1</code> so output 2 becomes colored with ''source transaction'' <code>T1</code>.
+* Output 1 receives 3 satoshis from input 0, 2 satoshis from input 1 and 1 satoshi from input 2. They are all from source address <code>A1</code>, so output 1 becomes colored with source address <code>A1</code>.
+* Output 2 receives the remaining 4 satoshis of input 2. Input 2 is from source address <code>A1</code> so output 2 becomes colored with source address <code>A1</code>.
 * Output 3 receives the 7 satoshis of input 3. Input 3 is uncolored so output 3 remains uncolored.
-* Output 4 receives the first 4 satoshis of input 4. Input 4 is from ''source transaction'' <code>T1</code> so output 4 becomes colored with ''source transaction'' <code>T1</code>.
-* Output 5 receives the remaining 2 satoshis of input 4, and 1 satoshi from input 5. Because input 4 and input 5 have different source transactions, output 5 is uncolored.
-* Output 6 receives the next 6 satoshis of input 5. Input 5 is from ''source transaction'' <code>T2</code> so output 6 becomes colored with ''source transaction'' <code>T2</code>.
+* Output 4 receives the first 4 satoshis of input 4. Input 4 is from source address <code>A1</code> so output 4 becomes colored with source address <code>A1</code>.
+* Output 5 receives the remaining 2 satoshis of input 4, and 1 satoshi from input 5. Because input 4 and input 5 have different source addresses, output 5 is uncolored.
+* Output 6 receives the next 6 satoshis of input 5. Input 5 is from source address <code>A2</code> so output 6 becomes colored with source address <code>A2</code>.
 * Fees come from the last satoshi of input 5, but they are always uncolored.
 
 ===Colored coins marker output===
@@ -172,13 +153,13 @@ Transactions relevant to the Colored Coins Protocol contain a special output cal
 |-
 ! Version number   || The major revision number of the CCP protocol used. For this version, it is 1. || 2 bytes
 |-
-! Transaction type || 1 to indicate an issue transaction, or 2 to indicate a transfer transaction. || 2 bytes
+! Transaction type || 1 to indicate an issuance transaction, or 2 to indicate a transfer transaction. || 2 bytes
 |}
 
 Additional optional metadata can be appended after the header. Possible formats for this metadata are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
 Essentially, in this version of the protocol, the marker output must start with:
-* <code>0x084343500001000100</code> for an issue transaction.
+* <code>0x084343500001000100</code> for an issuance transaction.
 * <code>0x084343500001000200</code> for a transfer transaction.
 
 ==Rationale==
@@ -187,13 +168,13 @@ This approach offers a number of desirable characteristics:
 
 # Economical: Neither the issuance process nor color transfer requires the parties to spend anything more than they want to transact, except for the usual transaction fee. This is because metadata is stored in an OP_RETURN output, which is not subject to the dust rule.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coins Protocol are identified by the special marker output.
-# Colors are pseudonymous. They are represented by a transaction hash (the ''source transaction'') and/or an address (the ''source address''), which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
-# This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO. Also, the protocol is very light in metadata and only embeds 9 bytes in each transaction (the marker output).
+# Colors are pseudonymous. They are represented by a source address, which is enough to identify each color uniquely, while still providing an adequate level of anonymity.
+# This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO. Also, this protocol is very light in metadata and only embeds 9 bytes in each transaction (the marker output).
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue colored coins. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue colored coins.
-# Generating a reissuable color based on a ''source address'' is as simple as generating an address, and can even be done offline.
-# Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer keeps the matching private key.
-# Single-issue colors can be achieved by only using the ''source transaction'' and ignoring the ''source address''.
-# Since output scripts are not limited to Pay-to-PubKey-Hash script but can be any script, it is possible to create a color represented by a ''source address'' that requires multiple signatures for issuance.
+# Generating a new color is as simple as generating an address, can be done offline, and for free.
+# Reissuing coins of a given color is easy and can be done at no cost (except for the transaction fee) as long as the issuer retains the private key for the source address.
+# Single-issue colors can be achieved by destroying the private key for the source address immediately after issuing the colored coins.
+# Since issuance is based on standard Bitcoin output scripts, it is possible to create a color that requires multiple signatures for issuance.
 
 ==Compatibility==
 
@@ -205,6 +186,4 @@ The Colored Coins Protocol sits on top of the Bitcoin protocol. It does not requ
 
 ===Compatibility between different versions of CCP===
 
-New versions with the same major version number (e.g. 1.1) should be backwards compatible, but may include new coloring algorithms. If they do so, older version will not recognize the transfer transactions created by newer clients, and using the new algorithm, but this is considered a valid behavior. Older clients may see some colored outputs as uncolored.
-
-New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identifiable by a different version number in the output 0 of genesis and transfer transactions.
+New versions with the same major version number (e.g. 1.1) should be backwards compatible. New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identifiable by a different version number in the output 0 of genesis and transfer transactions.
