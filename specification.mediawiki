@@ -6,7 +6,7 @@
 
 ==Abstract==
 
-This document describes a protocol used for storing and transfering custom, non-native assets on the Blockchain.
+This document describes a protocol used for storing and transferring custom, non-native assets on the Blockchain.
 
 An issuer would first issue colored coins and associate them with a formal or informal promise that he will redeem the coins according to terms he has defined. Colored coins can then be transferred using transactions that preserve the quantity of every asset.
 
@@ -23,13 +23,13 @@ There are many applications to colored coins:
 ==Protocol Overview==
 
 Outputs that use the Colored Coin Protocol to store an asset have two new characteristics:
-* The '''asset address''' is a Pay-to-Script-Hash address used to uniquely idenfity the asset stored on the output.
+* The '''asset address''' is a Pay-to-Script-Hash address used to uniquely identify the asset stored on the output.
 * The '''asset quantity''' is an unsigned integer representing how many units of that asset are stored on the output.
 
 This document describes how the asset address and quantity of an output are calculated.
 
 Each output in the Blockchain can be either colored or uncolored:
-* Uncolored ouptuts have no asset address and no asset quantity (they are both undefined).
+* Uncolored outputs have no asset address and no asset quantity (they are both undefined).
 * Colored outputs have a strictly positive asset quantity, and a non-null asset address.
 
 The asset address of an asset is the RIPEMD-160 hash of the output script referenced by the first input of the transaction that initially issued that asset. An issuer can reissue more of an already existing asset as long as they retain the private key for that asset address. Assets on two different outputs can only be mixed together if they were issued by the same asset address.
@@ -46,11 +46,13 @@ The private key from the first step is required to issue assets identified by th
 
 ==Colored Coin Transactions==
 
-The Colored Coin Protocol uses two types of transactions: one to issue assets, and one to transfer assets. Transactions that are not recognized as either of those two types are considered as having all their outputs uncolored.
+Transactions relevant to the Colored Coin Protocol contain a special output called the marker output. This allows clients to recognize such transactions. Colored transaction can be used to issue new assets, or transfer ownership of assets.
+
+Transactions that are not recognized as a colored coin transaction are considered as having all their outputs uncolored.
 
 ===Colored coin marker output===
 
-Transactions relevant to the Colored Coin Protocol contain a special output called the marker output. The marker output can be at any position, and have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used.
+The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as normal outputs.
 
 The marker output is an OP_RETURN opcode followed by a header. The contents of the marker output header are described below.
 
@@ -63,108 +65,126 @@ The marker output is an OP_RETURN opcode followed by a header. The contents of t
 |-
 ! Version number   || The major revision number of the CCP protocol used. For this version, it is 1. || 2 bytes
 |-
-! Transaction type || 1 to indicate an [[#issuing-assets|issuance transaction]], or 2 to indicate a [[#color-transfer|transfer transaction]]. || 2 bytes
-|-
-! Asset quantities || A list of zero or more [http://en.wikipedia.org/wiki/LEB128 LEB128-encoded] unsigned integers representing the asset quantity of every output in order. || Variable
+! Asset quantities || A list of zero or more [http://en.wikipedia.org/wiki/LEB128 LEB128-encoded] unsigned integers representing the asset quantity of every output in order (excluding the marker output). || Variable
 |}
 
 Additional optional metadata can be appended after the header. Possible formats for this metadata are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
 The <code>asset quantities</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). There is no upper limit to the asset quantity of an output, since LEB128 can encode arbitrarily large integers. The <code>length</code> field should be used to determine where the <code>asset quantities</code> list stops.
 
-If there are less items in the <code>asset quantities</code> list than the number of outputs, the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantities</code> list than the number of outputs, the colored coin transaction is invalid, and all outputs are uncolored.
+If there are less items in the <code>asset quantities</code> list than the number of outputs (excluding the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantities</code> list than the number of outputs, the colored coin transaction is invalid, and all outputs are uncolored. The marker output is always uncolored.
 
-After the <code>asset quantities</code> list has been used to assign an asset quantity to every output, the transaction type determines how to assign an asset address to each output.
+After the <code>asset quantities</code> list has been used to assign an asset quantity to every output, asset addresses are assigned to outputs. Outputs before the marker output are used for asset issuance, and outputs after the marker output are used for asset transfer.
 
 ====Example====
 
-This example illustrates how a marker output is decoded.
+This example illustrates how a marker output is decoded. Assuming the marker output is output 1:
 
     Data in the marker output      Description
     -----------------------------  -------------------------------------------------------------------
     OP_RETURN                      The OP_RETURN opcode.
-    0x0e                           The marker output data is 14 bytes long.
+    0x0c                           The marker output data is 12 bytes long.
     0x43 0x43 0x50 0x00            The Colored Coin Protocol tag.
     0x01 0x00                      Version 1 of the protocol.
-    0x02 0x00                      This is a transfer transaction.
     0xac 0x02 0x00 0xe5 0x8e 0x26  The asset quantities list:
                                    - '0xac 0x02' means output 0 has an asset quantity of 300.
-                                   - '0x00' means output 1 has an asset quantity of 0.
-                                   - '0xe5 0x8e 0x26' means output 2 has an asset quantity of 624,485.
-                                   - Outputs after output 2 (if any) have an asset quantity of 0.
+                                   - Output 1 is skipped and has an asset quantity of 0 because it is the marker output.
+                                   - '0x00' means output 2 has an asset quantity of 0.
+                                   - '0xe5 0x8e 0x26' means output 3 has an asset quantity of 624,485.
+                                   - Outputs after output 3 (if any) have an asset quantity of 0.
 
-===Issuing assets===
+===Asset issuance outputs===
 
-Issuing new assets is done through a special transaction called issuance transaction.
+All the outputs before the marker output are used for asset issuance.
 
-Outputs that have a non-zero asset quantity assigned to them receive the asset address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored. The asset addresses and quantities of the outputs referenced by the inputs of an issuance transaction are irrelevant.
+All outputs preceding the marker output that have a non-zero asset quantity receive the asset address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored.
 
-===Color transfer===
+===Asset transfer outputs===
 
-Transfer transactions are used to transfer assets.
+All the outputs after the marker output are used for asset transfer.
 
-After an asset quantity has been assigned to every ouput in the transaction, the asset addresses of outputs are determined using a method called order-based coloring.
+The asset addresses of those outputs are determined using a method called order-based coloring.
 
-Inputs are seen as a sequence of asset units, each having a non-null asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity.
+Inputs are seen as a sequence of asset units, having each an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after ther marker output.
 
 After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence. This is done until all the asset units in the input sequence or in the output sequence (whichever comes first) have been exhausted.
 
-Finally, for every output, if the asset units forming that output are all from the same asset address, the output receives that asset address. If the output contains units from more than one asset address or if it has an asset quantity of zero, the output is considered uncolored. If some asset units could not be assigned a asset address, because the total asset quantity in the input sequence was less than the total asset quantity in the output sequence, the corresponding ouputs are considered uncolored. The asset quantities of uncolored outputs become undefined, even if the <code>asset quantities</code> field from the marker output indicated a non-zero value.
+Finally, for every transfer output, if the asset units forming that output are all from the same asset address, the output receives that asset address. If the output contains units from more than one asset address or if it has an asset quantity of zero, the output is considered uncolored. If some asset units could not be assigned a asset address, because the total asset quantity in the input sequence was less than the total asset quantity in the output sequence, the corresponding outputs are considered uncolored. The asset quantities of uncolored outputs become undefined, even if the <code>asset quantities</code> field from the marker output indicated a non-zero value.
 
-====Example====
+===Example===
 
-This is an example of a transfer transaction. The <code>asset quantities</code> field in the marker output contains the following values:
+This is an example of a colored transaction.
 
-    0, 6, 4, 4, 3, 6, 4
+The coloring process starts by retrieving the asset quantities and addresses of the outputs referenced by each input of the transaction. Then, the marker output is identified. In this example, it is output 2, and the <code>asset quantities</code> field contains the following values:
 
-The order based coloring would work as follow:
+    0, 10, 6, 0, 4, 4, 3, 6, 4
+
+This list is used to assign asset quantities to outputs.
 
 
     Inputs                          Outputs - Initial state        Outputs - Final result
     =============================   =============================  =============================
-    Input 0                         Output 0                       Output 0
+    Input 0                         Output 0 (Issuance)            Output 0 (Issuance)
       Asset quantity:     3           Asset quantity:     0          Asset quantity:     <NULL>
       Asset address:      A1          Asset address:                 Asset address:      <NULL>
     -----------------------------   -----------------------------  -----------------------------
-    Input 1                         Output 1                       Output 1
-      Asset quantity:     2           Asset quantity:     6          Asset quantity:     6
+    Input 1                         Output 1 (Issuance)            Output 1 (Issuance)
+      Asset quantity:     2           Asset quantity:     10         Asset quantity:     10
+      Asset address:      A1          Asset address:                 Asset address:      H
+    -----------------------------   -----------------------------  -----------------------------
+    Input 2                         Output 2 (Marker)              Output 2 (Marker)
+      Asset quantity:     <NULL>      Asset quantity:     <NULL>     Asset quantity:     <NULL>
+      Asset address:      <NULL>      Asset address:      <NULL>     Asset address:      <NULL>
+    -----------------------------   -----------------------------  -----------------------------
+    Input 3                         Output 3 (Transfer)            Output 3 (Transfer)
+      Asset quantity:     5           Asset quantity:     6          Asset quantity:     6
       Asset address:      A1          Asset address:                 Asset address:      A1
     -----------------------------   -----------------------------  -----------------------------
-    Input 2                         Output 2                       Output 2
-      Asset quantity:     <NULL>      Asset quantity:     4          Asset quantity:     4
-      Asset address:      <NULL>      Asset address:                 Asset address:      A1
-    -----------------------------   -----------------------------  -----------------------------
-    Input 3                         Output 3                       Output 3
-      Asset quantity:     5           Asset quantity:     4          Asset quantity:     4
-      Asset address:      A1          Asset address:                 Asset address:      A1
-    -----------------------------   -----------------------------  -----------------------------
-    Input 4                         Output 4                       Output 4
-      Asset quantity:     6           Asset quantity:     3          Asset quantity:     <NULL>
+    Input 4                         Output 4 (Transfer)            Output 4 (Transfer)
+      Asset quantity:     6           Asset quantity:     0          Asset quantity:     <NULL>
       Asset address:      A1          Asset address:                 Asset address:      <NULL>
     -----------------------------   -----------------------------  -----------------------------
-    Input 5                         Output 5                       Output 5
-      Asset quantity:     9           Asset quantity:     6          Asset quantity:     6
-      Asset address:      A2          Asset address:                 Asset address:      A2
+    Input 5                         Output 5 (Transfer)            Output 5 (Transfer)
+      Asset quantity:     9           Asset quantity:     4          Asset quantity:     4
+      Asset address:      A2          Asset address:                 Asset address:      A1
     =============================   -----------------------------  -----------------------------
-                                    Output 6                       Output 6
+                                    Output 6 (Transfer)            Output 6 (Transfer)
+                                      Asset quantity:     4          Asset quantity:     4
+                                      Asset address:                 Asset address:      A1
+                                    -----------------------------  -----------------------------
+                                    Output 7 (Transfer)            Output 7 (Transfer)
+                                      Asset quantity:     3          Asset quantity:     <NULL>
+                                      Asset address:                 Asset address:      <NULL>
+                                    -----------------------------  -----------------------------
+                                    Output 8 (Transfer)            Output 8 (Transfer)
+                                      Asset quantity:     6          Asset quantity:     6
+                                      Asset address:                 Asset address:      A2
+                                    -----------------------------  -----------------------------
+                                    Output 9 (Transfer)            Output 9 (Transfer)
                                       Asset quantity:     4          Asset quantity:     <NULL>
                                       Asset address:                 Asset address:      <NULL>
                                     =============================  =============================
 
-Outputs are colored from the first to the last:
+Outputs are colored from the first to the last. Outputs before the marker output are issuance outputs:
 * Output 0 has an asset quantity of zero, so it is considered uncolored.
-* Output 1 receives 3 units from input 0, 2 units from input 1, 0 unit from input 2 and 1 unit from input 3. All the 6 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 1.
-* Output 2 receives the remaining 4 units of input 3. Input 3 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 2.
-* Output 3 receives the first 4 units of input 4. Input 4 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 3.
-* Output 4 receives the remaining 2 units of input 4, and 1 unit from input 5. Because input 4 and input 5 are from two different asset addresses, output 4 is uncolored, and no longer has an asset quantity defined.
-* Output 5 receives the next 6 units of input 5. Input 5 is from asset address <code>A2</code> so the asset address <code>A2</code> is assigned to output 5.
-* Output 6 receives the last 2 units of input 5. 2 units remain uncolored in output 6, so it becomes uncolored, and no longer has an asset quantity defined.
+* Output 1 receives the asset address defined by <code>H = RIPEMD-160(S)</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
+
+Output 2 is the marker output, separating issuance outputs from transfer outputs. The marker output is always uncolored.
+
+Transfer outputs are then colored:
+* Output 3 receives 3 units from input 0, 2 units from input 1, 0 unit from input 2 and 1 unit from input 3. All the 6 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 3.
+* Output 4 has an asset quantity of zero, so it is considered uncolored.
+* Output 5 receives the remaining 4 units of input 3. Input 3 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 5.
+* Output 6 receives the first 4 units of input 4. Input 4 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 6.
+* Output 7 receives the remaining 2 units of input 4, and 1 unit from input 5. Because input 4 and input 5 are from two different asset addresses, output 7 is uncolored, and no longer has an asset quantity defined.
+* Output 8 receives the next 6 units of input 5. Input 5 is from asset address <code>A2</code> so the asset address <code>A2</code> is assigned to output 8.
+* Output 9 receives the last 2 units of input 5. 2 units remain uncolored in output 9, so it becomes uncolored, and no longer has an asset quantity defined.
 
 ==Rationale==
 
 This approach offers a number of desirable characteristics:
 
-# Economical: The cost of issuing or transfering an asset is completely independant from the quantity issued or transfered.
+# Economical: The cost of issuing or transferring an asset is completely independent from the quantity issued or transfered.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coin Protocol are identified by the special marker output.
 # It is possible to determine the asset address and quantity of an output by traversing only a limited number of transactions.
 # Assets are pseudonymous. They are represented by an asset address, which is enough to identify each asset uniquely, while still providing an adequate level of anonymity for both the issuer and users of the asset.
