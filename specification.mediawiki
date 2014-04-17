@@ -88,7 +88,8 @@ This example illustrates how a marker output is decoded. Assuming the marker out
     0x01 0x00                      Version 1 of the protocol.
     0xac 0x02 0x00 0xe5 0x8e 0x26  The asset quantities list:
                                    - '0xac 0x02' means output 0 has an asset quantity of 300.
-                                   - Output 1 is skipped and has an asset quantity of 0 because it is the marker output.
+                                   - Output 1 is skipped and has an asset quantity of 0
+                                     because it is the marker output.
                                    - '0x00' means output 2 has an asset quantity of 0.
                                    - '0xe5 0x8e 0x26' means output 3 has an asset quantity of 624,485.
                                    - Outputs after output 3 (if any) have an asset quantity of 0.
@@ -105,7 +106,7 @@ All the outputs after the marker output are used for asset transfer.
 
 The asset addresses of those outputs are determined using a method called order-based coloring.
 
-Inputs are seen as a sequence of asset units, having each an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after ther marker output.
+Inputs are seen as a sequence of asset units, having each an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
 
 After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence. This is done until all the asset units in the input sequence or in the output sequence (whichever comes first) have been exhausted.
 
@@ -184,7 +185,7 @@ Transfer outputs are then colored:
 
 This approach offers a number of desirable characteristics:
 
-# Economical: The cost of issuing or transferring an asset is completely independent from the quantity issued or transfered.
+# Economical: The cost of issuing or transferring an asset is completely independent from the quantity issued or transferred.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coin Protocol are identified by the special marker output.
 # It is possible to determine the asset address and quantity of an output by traversing only a limited number of transactions.
 # Assets are pseudonymous. They are represented by an asset address, which is enough to identify each asset uniquely, while still providing an adequate level of anonymity for both the issuer and users of the asset.
