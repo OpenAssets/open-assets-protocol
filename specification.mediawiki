@@ -98,7 +98,7 @@ This example illustrates how a marker output is decoded. Assuming the marker out
 
 All the outputs before the marker output are used for asset issuance.
 
-All outputs preceding the marker output that have a non-zero asset quantity receive the asset address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored.
+All outputs preceding the marker output and with a non-zero asset quantity get assigned the asset address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored.
 
 ===Asset transfer outputs===
 
@@ -110,7 +110,7 @@ Inputs are seen as a sequence of asset units, having each an asset address. Simi
 
 After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence. This is done until all the asset units in the input sequence or in the output sequence (whichever comes first) have been exhausted.
 
-Finally, for every transfer output, if the asset units forming that output are all from the same asset address, the output receives that asset address. If the output contains units from more than one asset address or if it has an asset quantity of zero, the output is considered uncolored. If some asset units could not be assigned a asset address, because the total asset quantity in the input sequence was less than the total asset quantity in the output sequence, the corresponding outputs are considered uncolored. The asset quantities of uncolored outputs become undefined, even if the <code>asset quantities</code> field from the marker output indicated a non-zero value.
+Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If the output contains units from more than one asset address or if it has an asset quantity of zero, the output is considered uncolored. If some asset units could not be assigned an asset address, because the total asset quantity in the input sequence was less than the total asset quantity in the output sequence, the corresponding outputs are considered uncolored. The asset quantities of uncolored outputs become undefined, even if the <code>asset quantities</code> field from the marker output indicated a non-zero value.
 
 ===Example===
 
@@ -168,7 +168,7 @@ This list is used to assign asset quantities to outputs.
 
 Outputs are colored from the first to the last. Outputs before the marker output are issuance outputs:
 * Output 0 has an asset quantity of zero, so it is considered uncolored.
-* Output 1 receives the asset address defined by <code>H = RIPEMD-160(S)</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
+* Output 1 gets assigned the asset address defined by <code>H = RIPEMD-160(S)</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
 
 Output 2 is the marker output, separating issuance outputs from transfer outputs. The marker output is always uncolored.
 
