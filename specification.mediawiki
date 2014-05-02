@@ -1,28 +1,28 @@
 <pre>
-  Title: Colored Coin Protocol (CCP/1.0)
+  Title: Open Assets Protocol (OAP/1.0)
   Author: Flavien Charlon <flavien.charlon@coinprism.com>
   Created: 12-12-2013
 </pre>
 
 ==Abstract==
 
-This document describes a protocol used for storing and transferring custom, non-native assets on the Blockchain.
+This document describes a protocol used for storing and transferring custom, non-native assets on the Blockchain. Assets are represented by tokens called colored coins.
 
 An issuer would first issue colored coins and associate them with a formal or informal promise that he will redeem the coins according to terms he has defined. Colored coins can then be transferred using transactions that preserve the quantity of every asset.
 
 ==Motivation==
 
-In the current Bitcoin implementation, outputs represent a quantity of Bitcoin, secured by an output script. With Colored Coin Protocol, outputs can encapsulate a quantity of a user defined asset on top of that Bitcoin amount.
+In the current Bitcoin implementation, outputs represent a quantity of Bitcoin, secured by an output script. With the Open Assets Protocol, outputs can encapsulate a quantity of a user-defined asset on top of that Bitcoin amount.
 
-There are many applications to colored coins:
+There are many applications:
 
 * A company could issue colored coins representing shares. The shares could then be traded frictionlessly through the Bitcoin infrastructure.
 * A bank could issue colored coins backed by a cash reserve. People could withdraw and deposit money in colored coins, and trade those, or use them to pay for goods and services. The Blockchain becomes a system allowing to transact not only in Bitcoin, but in any currency.
-* Locks on cars or houses could be associated to coins of a particular color. The door would only open when presented with a wallet containing a coin of that specific color.
+* Locks on cars or houses could be associated with a particular type of colored coins. The door would only open when presented with a wallet containing that specific coin.
 
 ==Protocol Overview==
 
-Outputs that use the Colored Coin Protocol to store an asset have two new characteristics:
+Outputs using the Open Assets Protocol to store an asset have two new characteristics:
 * The '''asset address''' is a Pay-to-Script-Hash address used to uniquely identify the asset stored on the output.
 * The '''asset quantity''' is an unsigned integer representing how many units of that asset are stored on the output.
 
@@ -44,13 +44,13 @@ The process to generate an asset address and the matching private key is describ
 
 The private key from the first step is required to issue assets identified by the asset address <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset address.
 
-==Colored Coin Transactions==
+==Open Assets Transactions==
 
-Transactions relevant to the Colored Coin Protocol contain a special output called the marker output. This allows clients to recognize such transactions. Colored transaction can be used to issue new assets, or transfer ownership of assets.
+Transactions relevant to the Open Assets Protocol must have a special output called the marker output. This allows clients to recognize such transactions. Open Assets transactions can be used to issue new assets, or transfer ownership of assets.
 
-Transactions that are not recognized as a colored coin transaction are considered as having all their outputs uncolored.
+Transactions that are not recognized as an Open Assets transaction are considered as having all their outputs uncolored.
 
-===Colored coin marker output===
+===Marker output===
 
 The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as normal outputs.
 
@@ -61,9 +61,9 @@ The marker output is an OP_RETURN opcode followed by a header. The contents of t
 |-
 ! Length           || The [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] encoded length of the marker header, not including this field. || 1-9 bytes
 |-
-! CCP Marker       || A tag indicating that this transaction is using Colored Coin Protocol. It is always 0x43435000. || 4 bytes
+! OAP Marker       || A tag indicating that this transaction is an Open Assets transaction. It is always 0x4f41. || 2 bytes
 |-
-! Version number   || The major revision number of the CCP protocol used. For this version, it is 1. || 2 bytes
+! Version number   || The major revision number of the Open Assets Protocol. For this version, it is 1. || 2 bytes
 |-
 ! Asset quantities || A list of zero or more [http://en.wikipedia.org/wiki/LEB128 LEB128-encoded] unsigned integers representing the asset quantity of every output in order (excluding the marker output). || Variable
 |}
@@ -72,7 +72,7 @@ Additional optional metadata can be appended after the header. Possible formats 
 
 The <code>asset quantities</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). There is no upper limit to the asset quantity of an output, since LEB128 can encode arbitrarily large integers. The <code>length</code> field should be used to determine where the <code>asset quantities</code> list stops.
 
-If there are less items in the <code>asset quantities</code> list than the number of outputs (excluding the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantities</code> list than the number of outputs, the colored coin transaction is invalid, and all outputs are uncolored. The marker output is always uncolored.
+If there are less items in the <code>asset quantities</code> list than the number of outputs (excluding the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantities</code> list than the number of outputs, the transaction is invalid for Open Assets, and all outputs are uncolored. The marker output is always uncolored.
 
 After the <code>asset quantities</code> list has been used to assign an asset quantity to every output, asset addresses are assigned to outputs. Outputs before the marker output are used for asset issuance, and outputs after the marker output are used for asset transfer.
 
@@ -83,8 +83,8 @@ This example illustrates how a marker output is decoded. Assuming the marker out
     Data in the marker output      Description
     -----------------------------  -------------------------------------------------------------------
     OP_RETURN                      The OP_RETURN opcode.
-    0x0c                           The marker output data is 12 bytes long.
-    0x43 0x43 0x50 0x00            The Colored Coin Protocol tag.
+    0x0a                           The marker output header is 10 bytes long.
+    0x4f 0x41                      The Open Assets Protocol tag.
     0x01 0x00                      Version 1 of the protocol.
     0xac 0x02 0x00 0xe5 0x8e 0x26  The asset quantities list:
                                    - '0xac 0x02' means output 0 has an asset quantity of 300.
@@ -114,7 +114,7 @@ Finally, for each transfer output, if the asset units forming that output all ha
 
 ===Example===
 
-This is an example of a colored transaction.
+This is an example of an Open Assets transaction.
 
 The coloring process starts by retrieving the asset quantities and addresses of the outputs referenced by each input of the transaction. Then, the marker output is identified. In this example, it is output 2, and the <code>asset quantities</code> field contains the following values:
 
@@ -186,10 +186,10 @@ Transfer outputs are then colored:
 This approach offers a number of desirable characteristics:
 
 # Economical: The cost of issuing or transferring an asset is completely independent from the quantity issued or transferred.
-# Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Colored Coin Protocol are identified by the special marker output.
+# Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Open Assets Protocol are identified by the special marker output.
 # It is possible to determine the asset address and quantity of an output by traversing only a limited number of transactions.
 # Assets are pseudonymous. They are represented by an asset address, which is enough to identify each asset uniquely, while still providing an adequate level of anonymity for both the issuer and users of the asset.
-# This approach uses the recommended way to embed data in the blockchain (OP_RETURN), and therefore does not pollute the UTXO.
+# This approach uses the recommended way to embed data in the Blockchain (OP_RETURN), and therefore does not pollute the UTXO.
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue assets. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue assets.
 # Generating a new type of asset is as simple as generating an address, can be done offline, and for free.
 # Reissuing more of an existing asset is easy and can be done quickly and at no cost (except for the transaction fee) as long as the issuer retains the private key for the asset address.
@@ -202,8 +202,8 @@ For backward compatibility reasons, we consider than an older client is allowed 
 
 ===Backward compatibility with existing Bitcoin protocol===
 
-The Colored Coin Protocol sits on top of the Bitcoin protocol. It does not require any change to the existing Bitcoin protocol. Existing clients that don't support the colored coin protocol will see all outputs as uncolored, and will not be able to perform transfer transactions.
+The Open Assets Protocol sits on top of the Bitcoin protocol. It does not require any change to the existing Bitcoin protocol. Existing clients that don't support the Open Assets Protocol will see all outputs as uncolored, and will not be able to perform transfer transactions.
 
-===Compatibility between different versions of CCP===
+===Compatibility between different versions of OAP===
 
 New versions with the same major version number (e.g. 1.1) should be backwards compatible. New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identifiable by a different version number in the output 0 of genesis and transfer transactions.
