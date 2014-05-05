@@ -54,27 +54,41 @@ Transactions that are not recognized as an Open Assets transaction are considere
 
 The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as normal outputs.
 
-The marker output uses the OP_RETURN opcode. The contents of the marker output are described below.
+The marker output uses the OP_RETURN opcode. The contents of the marker output are described below:
+
+{|
+! Field               !! Description !! Size
+|-
+! OP_RETURN opcode    || The OP_RETURN opcode (0x6a). || 1 byte
+|-
+! Payload length      || The [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] encoded length of the payload in bytes. || 1-9 bytes
+|-
+! Open Assets Payload || See below. || Variable
+|}
+
+The payload as defined by the Open Assets protocol has the following format:
 
 {|
 ! Field                !! Description !! Size
 |-
-! Length               || The [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] encoded length of the data, not including this field. || 1-9 bytes
-|-
 ! OAP Marker           || A tag indicating that this transaction is an Open Assets transaction. It is always 0x4f41. || 2 bytes
 |-
-! Version number       || The major revision number of the Open Assets Protocol. For this version, it is 1. || 2 bytes
+! Version number       || The major revision number of the Open Assets Protocol. For this version, it is 1 (0x0100). || 2 bytes
 |-
-! Asset quantity count || The number of items in the <code>asset quantity list</code> field, [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] encoded. || 1-9 bytes
+! Asset quantity count || A [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] representing the number of items in the <code>asset quantity list</code> field. || 1-9 bytes
 |-
 ! Asset quantity list  || A list of zero or more [http://en.wikipedia.org/wiki/LEB128 LEB128-encoded] unsigned integers representing the asset quantity of every output in order (excluding the marker output). || Variable
 |-
-! Arbitrary metadata   || Arbitrary optional metadata to be associated with this transaction. || Variable
+! Metadata length      || The [https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer var-integer] encoded length of the <code>metadata</code> field. || 1-9 bytes
+|-
+! Metadata             || Arbitrary metadata to be associated with this transaction. This can be empty. || Variable
 |}
 
-Possible formats for the <code>arbitrary metadata</code> field are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
+Possible formats for the <code>metadata</code> field are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
-The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). There is no upper limit to the asset quantity of an output, since LEB128 can encode arbitrarily large integers. The <code>asset quantity count</code> field indicates the number of LEB128 integers in the <code>asset quantity list</code>. If the actual number of values in the <code>asset quantity list</code> does not match the <code>asset quantity count</code> field, the transaction is invalid, and all outputs are uncolored.
+The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). There is no upper limit to the asset quantity of an output, since LEB128 can encode arbitrarily large integers.
+
+If the marker output is malformed, the transaction is invalid, and all outputs are uncolored.
 
 If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the transaction is deemed invalid, and all outputs are uncolored. The marker output is always uncolored.
 
@@ -86,8 +100,8 @@ This example illustrates how a marker output is decoded. Assuming the marker out
 
     Data in the marker output      Description
     -----------------------------  -------------------------------------------------------------------
-    OP_RETURN                      The OP_RETURN opcode.
-    0x0f                           The marker output is 15 bytes long.
+    0x6a                           The OP_RETURN opcode.
+    0x10                           The marker output is 16 bytes long.
     0x4f 0x41                      The Open Assets Protocol tag.
     0x01 0x00                      Version 1 of the protocol.
     0x03                           There are 3 items in the asset quantity list.
@@ -98,7 +112,8 @@ This example illustrates how a marker output is decoded. Assuming the marker out
                                    - '0x00' means output 2 has an asset quantity of 0.
                                    - '0xe5 0x8e 0x26' means output 3 has an asset quantity of 624,485.
                                    - Outputs after output 3 (if any) have an asset quantity of 0.
-    0x12 0x34 0x56 0x78            4 bytes of arbitrary metadata.
+    0x04                           The metadata is 4 bytes long.
+    0x12 0x34 0x56 0x78            Some arbitrary metadata.
 
 ===Asset issuance outputs===
 
