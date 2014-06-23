@@ -40,7 +40,7 @@ The process to generate an asset address and the matching private key is describ
 # The issuer first generates a private key: <code>18E14A7B6A307F426A94F8114701E7C8E774E7F9A47E2C2035DB29A206321725</code>.
 # He calculates the corresponding address: <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
 # Next, he builds the Pay-to-PubKey-Hash script associated to that address: <code>OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG</code>.
-# Finally, he hashes that script to obtain the asset address: <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>.
+# Finally, he hashes that script to obtain the asset address: <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>.
 
 The private key from the first step is required to issue assets identified by the asset address <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset address.
 
