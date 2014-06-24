@@ -32,7 +32,7 @@ Each output in the Blockchain can be either colored or uncolored:
 * Uncolored outputs have no asset address and no asset quantity (they are both undefined).
 * Colored outputs have a strictly positive asset quantity, and a non-null asset address.
 
-The asset address of an asset is the RIPEMD-160 hash of the output script referenced by the first input of the transaction that initially issued that asset. An issuer can reissue more of an already existing asset as long as they retain the private key for that asset address. Assets on two different outputs can only be mixed together if they were issued by the same asset address.
+The asset address of an asset is the RIPEMD-160 hash of the SHA-256 hash of the output script referenced by the first input of the transaction that initially issued that asset (<code>script_hash = RIPEMD160(SHA256(script))</code>). An issuer can reissue more of an already existing asset as long as they retain the private key for that asset address. Assets on two different outputs can only be mixed together if they were issued by the same asset address.
 
 When represented in base-58, an asset address must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of an asset address therefore starts with a '3' in mainnet.
 
@@ -40,9 +40,9 @@ The process to generate an asset address and the matching private key is describ
 # The issuer first generates a private key: <code>18E14A7B6A307F426A94F8114701E7C8E774E7F9A47E2C2035DB29A206321725</code>.
 # He calculates the corresponding address: <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
 # Next, he builds the Pay-to-PubKey-Hash script associated to that address: <code>OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG</code>.
-# Finally, he hashes that script to obtain the asset address: <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>.
+# Finally, he hashes that script to obtain the asset address: <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>.
 
-The private key from the first step is required to issue assets identified by the asset address <code>3AH9zTfTEo7tKi3EYWQuofb1pzWtZJ4EeS</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset address.
+The private key from the first step is required to issue assets identified by the asset address <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset address.
 
 ==Open Assets Transactions==
 
