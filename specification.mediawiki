@@ -86,7 +86,7 @@ The payload as defined by the Open Assets protocol has the following format:
 
 Possible formats for the <code>metadata</code> field are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
-The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). There is no upper limit to the asset quantity of an output, since LEB128 can encode arbitrarily large integers.
+The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). If the LEB128-encoded asset quantity of any output exceeds 32 bytes, the transaction is deemed invalid, and all outputs are uncolored. The maximum valid asset quantity for an output is 2<sup>7 * 32</sup> - 1 units.
 
 If the marker output is malformed, the transaction is invalid, and all outputs are uncolored.
 
