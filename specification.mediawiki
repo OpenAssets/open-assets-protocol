@@ -127,11 +127,11 @@ All the outputs after the marker output are used for asset transfer.
 
 The asset addresses of those outputs are determined using a method called order-based coloring.
 
-Inputs are seen as a sequence of asset units, having each an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
+Inputs are seen as a sequence of asset units, each having an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
 
-After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence. This is done until all the asset units in the input sequence or in the output sequence (whichever comes first) have been exhausted.
+After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence until all the asset units in the output sequence have received an asset address. If there are less asset units in the input sequence than in the output sequence, the transaction is considered invalid and all outputs are uncolored.
 
-Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If the output contains units from more than one asset address or if it has an asset quantity of zero, the output is considered uncolored. If some asset units could not be assigned an asset address, because the total asset quantity in the input sequence was less than the total asset quantity in the output sequence, the corresponding outputs are considered uncolored. The asset quantities of uncolored outputs become undefined, even if the <code>asset quantity list</code> field from the marker output indicated a non-zero value for those outputs.
+Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If any output contains units from more than one distinct asset address, the whole transaction is considered invalid, and all outputs are uncolored. Outputs with an asset quantity of zero are always considered uncolored.
 
 ===Example===
 
@@ -163,28 +163,16 @@ This list is used to assign asset quantities to outputs.
       Asset address:      A1          Asset address:                 Asset address:      A1
     -----------------------------   -----------------------------  -----------------------------
     Input 4                         Output 4 (Transfer)            Output 4 (Transfer)
-      Asset quantity:     6           Asset quantity:     0          Asset quantity:     <NULL>
+      Asset quantity:     3           Asset quantity:     0          Asset quantity:     <NULL>
       Asset address:      A1          Asset address:                 Asset address:      <NULL>
     -----------------------------   -----------------------------  -----------------------------
     Input 5                         Output 5 (Transfer)            Output 5 (Transfer)
-      Asset quantity:     9           Asset quantity:     4          Asset quantity:     4
+      Asset quantity:     9           Asset quantity:     7          Asset quantity:     6
       Asset address:      A2          Asset address:                 Asset address:      A1
     =============================   -----------------------------  -----------------------------
                                     Output 6 (Transfer)            Output 6 (Transfer)
-                                      Asset quantity:     4          Asset quantity:     4
-                                      Asset address:                 Asset address:      A1
-                                    -----------------------------  -----------------------------
-                                    Output 7 (Transfer)            Output 7 (Transfer)
-                                      Asset quantity:     3          Asset quantity:     <NULL>
-                                      Asset address:                 Asset address:      <NULL>
-                                    -----------------------------  -----------------------------
-                                    Output 8 (Transfer)            Output 8 (Transfer)
-                                      Asset quantity:     6          Asset quantity:     6
+                                      Asset quantity:     3          Asset quantity:     3
                                       Asset address:                 Asset address:      A2
-                                    -----------------------------  -----------------------------
-                                    Output 9 (Transfer)            Output 9 (Transfer)
-                                      Asset quantity:     4          Asset quantity:     <NULL>
-                                      Asset address:                 Asset address:      <NULL>
                                     =============================  =============================
 
 Outputs are colored from the first to the last. Outputs before the marker output are issuance outputs:
@@ -196,11 +184,8 @@ Output 2 is the marker output, separating issuance outputs from transfer outputs
 Transfer outputs are then colored:
 * Output 3 receives 3 units from input 0, 2 units from input 1, 0 unit from input 2 and 1 unit from input 3. All the 6 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 3.
 * Output 4 has an asset quantity of zero, so it is considered uncolored.
-* Output 5 receives the remaining 4 units of input 3. Input 3 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 5.
-* Output 6 receives the first 4 units of input 4. Input 4 is from asset address <code>A1</code> so the asset address <code>A1</code> is assigned to output 6.
-* Output 7 receives the remaining 2 units of input 4, and 1 unit from input 5. Because input 4 and input 5 are from two different asset addresses, output 7 is uncolored, and no longer has an asset quantity defined.
-* Output 8 receives the next 6 units of input 5. Input 5 is from asset address <code>A2</code> so the asset address <code>A2</code> is assigned to output 8.
-* Output 9 receives the last 2 units of input 5. 2 units remain uncolored in output 9, so it becomes uncolored, and no longer has an asset quantity defined.
+* Output 5 receives the remaining 4 units of input 3, and 3 units from input 4. All the 7 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 5.
+* Output 6 receives the first 3 units of input 5. Input 5 is from asset address <code>A2</code> so the asset address <code>A2</code> is assigned to output 6.
 
 ==Rationale==
 
@@ -228,3 +213,4 @@ The Open Assets Protocol sits on top of the Bitcoin protocol. It does not requir
 ===Compatibility between different versions of OAP===
 
 New versions with the same major version number (e.g. 1.1) should be backwards compatible. New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identifiable by a different version number in the output 0 of genesis and transfer transactions.
+
