@@ -139,7 +139,7 @@ This is an example of an Open Assets transaction.
 
 The coloring process starts by retrieving the asset quantities and addresses of the outputs referenced by each input of the transaction. Then, the marker output is identified. In this example, it is output 2, and the <code>asset quantity list</code> field contains the following values:
 
-    0, 10, 6, 0, 4, 4, 3, 6, 4
+    0, 10, 6, 0, 7, 3
 
 This list is used to assign asset quantities to outputs.
 
@@ -167,7 +167,7 @@ This list is used to assign asset quantities to outputs.
       Asset address:      A1          Asset address:                 Asset address:      <NULL>
     -----------------------------   -----------------------------  -----------------------------
     Input 5                         Output 5 (Transfer)            Output 5 (Transfer)
-      Asset quantity:     9           Asset quantity:     7          Asset quantity:     6
+      Asset quantity:     9           Asset quantity:     7          Asset quantity:     7
       Asset address:      A2          Asset address:                 Asset address:      A1
     =============================   -----------------------------  -----------------------------
                                     Output 6 (Transfer)            Output 6 (Transfer)
