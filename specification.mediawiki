@@ -1,6 +1,6 @@
 <pre>
   Title: Open Assets Protocol (OAP/1.0)
-  Author: Flavien Charlon <flavien.charlon@coinprism.com>
+  Author: Flavien Charlon <flavien@charlon.net>
   Created: 12-12-2013
 </pre>
 
@@ -214,3 +214,6 @@ The Open Assets Protocol sits on top of the Bitcoin protocol. It does not requir
 
 New versions with the same major version number (e.g. 1.1) should be backwards compatible. New versions with a different major version number (e.g. 2.0) can introduce breaking changes, but transactions created by newer clients will be identifiable by a different version number in the output 0 of genesis and transfer transactions.
 
+==Copyright==
+
+This document has been placed in the public domain.
