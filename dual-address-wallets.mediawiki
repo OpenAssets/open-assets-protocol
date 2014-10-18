@@ -1,0 +1,65 @@
+<pre>
+  Title: Open Assets Dual-Address Wallets
+  Author: Flavien Charlon <flavien@charlon.net>
+  Created: 17-10-2013
+</pre>
+
+==Abstract==
+
+This document describes a mechanism for preventing misspending of outputs representing assets through the Open Assets Protocol.
+
+==Motivation==
+
+A side effect of the Open Assets Protocol is that a colored output can be spent incorrectly by wallets unaware of the protocol, causing the destruction of the asset encoded in the output.
+
+This documents describes a process preventing wallets that are unaware of the Open Assets Protocol from misspending colored outputs.
+
+==Specification==
+
+The derived address of an address A is defined as the pay-to-script-hash address representing the hash of the script associated to address A (<code>script_hash = RIPEMD160(SHA256(script))</code>).
+
+Wallets capable of correctly manipulating Open Assets outputs should do the following:
+
+# '''When displaying the balance of address A''', the wallet should display the balance of both address A and its derived address
+# '''When sending assets or Bitcoins from address A''', the wallet may use unspent outputs from both address A and its derived address
+# '''When sending assets to address A''', the wallet should send assets to the derived address instead
+# '''When sending Bitcoins to address A''', the wallet should continue to send them to address A
+
+===Example===
+
+Considering the address <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>. The derived address is calculated as follow:
+
+    Script:      OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG
+    Script Hex:  76 A9 14 010966776006953D5567439E5E39F86A0D273BEE 88 AC
+    Script Hash: 36E0EA8E93EAA0285D641305F4C81E563AA570A2
+    Base-58:     36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R
+
+So the derived address is <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>. While both addresses are different, outputs sent at both addresses can be redeemed with the same private key.
+
+A wallet supporting Open Assets, and managing address <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code> should:
+
+* Combine the balance of <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code> and <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code> when displaying the wallet balance.
+* Use unspent outputs from both <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code> and <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code> when sending assets or Bitcoins.
+
+A wallet supporting Open Assets and making an outbound transaction to address <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code> should:
+
+* Send uncolored outputs to <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
+* Send colored outputs to <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>.
+
+==Rationale==
+
+If one is capable of spending funds sent to an address, they also will be able to spend funds sent to its derived address.
+
+Wallets following those four rules will be able to send and receive assets to and from each other. However, a legacy wallet ignoring derived addresses will not be able to see or spend colored outputs, as colored outputs are sent to the derived address rather than the address itself.
+
+Assets inadvertently sent to a legacy wallet are recoverable by re-importing the private key in a wallet supporting Open Assets.
+
+==Backwards Compatibility==
+
+The user experience for sending and receiving regular Bitcoins is unaffected.
+
+Dual-address wallets are also capable of receiving assets from Open Assets wallets that don't implement dual-address.
+
+==See Also==
+
+* [[specification.mediawiki|Open Assets Protocol Specification]]
