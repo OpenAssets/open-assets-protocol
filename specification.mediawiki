@@ -52,7 +52,7 @@ Transactions that are not recognized as an Open Assets transaction are considere
 
 ===Marker output===
 
-The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as normal outputs.
+The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as regular outputs. If no valid marker output exists in the transaction, all outputs are considered uncolored.
 
 The marker output uses the OP_RETURN opcode. The contents of the marker output are described below:
 
@@ -86,11 +86,11 @@ The payload as defined by the Open Assets protocol has the following format:
 
 Possible formats for the <code>metadata</code> field are outside of scope of this protocol, and may be described in separate protocol specifications building on top of this one.
 
-The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). If the LEB128-encoded asset quantity of any output exceeds 9 bytes, the transaction is deemed invalid, and all outputs are uncolored. The maximum valid asset quantity for an output is 2<sup>63</sup> - 1 units.
+The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). If the LEB128-encoded asset quantity of any output exceeds 9 bytes, the marker output is deemed invalid. The maximum valid asset quantity for an output is 2<sup>63</sup> - 1 units.
 
-If the marker output is malformed, the transaction is invalid, and all outputs are uncolored.
+If the marker output is malformed, it is considered invalid.
 
-If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the transaction is deemed invalid, and all outputs are uncolored. The marker output is always uncolored.
+If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the marker output is deemed invalid. The marker output is always uncolored.
 
 After the <code>asset quantity list</code> has been used to assign an asset quantity to every output, asset addresses are assigned to outputs. Outputs before the marker output are used for asset issuance, and outputs after the marker output are used for asset transfer.
 
@@ -129,9 +129,9 @@ The asset addresses of those outputs are determined using a method called order-
 
 Inputs are seen as a sequence of asset units, each having an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
 
-After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence until all the asset units in the output sequence have received an asset address. If there are less asset units in the input sequence than in the output sequence, the transaction is considered invalid and all outputs are uncolored.
+After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence until all the asset units in the output sequence have received an asset address. If there are less asset units in the input sequence than in the output sequence, the marker output is considered invalid.
 
-Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If any output contains units from more than one distinct asset address, the whole transaction is considered invalid, and all outputs are uncolored. Outputs with an asset quantity of zero are always considered uncolored.
+Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If any output contains units from more than one distinct asset address, the marker output is considered invalid. Outputs with an asset quantity of zero are always considered uncolored.
 
 ===Example===
 
