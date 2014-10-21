@@ -88,7 +88,7 @@ Possible formats for the <code>metadata</code> field are outside of scope of thi
 
 The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). If the LEB128-encoded asset quantity of any output exceeds 9 bytes, the marker output is deemed invalid. The maximum valid asset quantity for an output is 2<sup>63</sup> - 1 units.
 
-If the marker output is malformed, it is considered invalid.
+If the marker output is malformed, it is considered invalid. Coinbase transactions and transactions with zero inputs cannot have a valid marker output, even if it would be otherwise considered valid.
 
 If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the marker output is deemed invalid. The marker output is always uncolored.
 
