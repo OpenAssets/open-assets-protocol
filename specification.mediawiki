@@ -177,7 +177,7 @@ This list is used to assign asset quantities to outputs.
 
 Outputs are colored from the first to the last. Outputs before the marker output are issuance outputs:
 * Output 0 has an asset quantity of zero, so it is considered uncolored.
-* Output 1 gets assigned the asset address defined by <code>H = RIPEMD-160(S)</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
+* Output 1 gets assigned the asset address defined by <code>H = RIPEMD160(SHA256((S))</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
 
 Output 2 is the marker output, separating issuance outputs from transfer outputs. The marker output is always uncolored.
 
