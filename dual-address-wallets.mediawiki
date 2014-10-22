@@ -16,14 +16,18 @@ This documents describes a process preventing wallets that are unaware of the Op
 
 ==Specification==
 
-The derived address of an address A is defined as the pay-to-script-hash address representing the hash of the script associated to address A (<code>script_hash = RIPEMD160(SHA256(script))</code>).
+The derived address of a pay-to-public-key-hash address A is defined as the pay-to-script-hash address representing the hash of the pay-to-public-key-hash script for address A.
 
-Wallets capable of correctly manipulating Open Assets outputs should do the following:
+Address derivation only applies to pay-to-public-key-hash addresses. 
 
-# '''When displaying the balance of address A''', the wallet should display the balance of both address A and its derived address
+Wallets capable of correctly manipulating Open Assets outputs should do the following (assuming A is a pay-to-public-key-hash address):
+
+# '''When displaying the balance of address A''', the wallet should combine the balances of both address A and its derived address
 # '''When sending assets or Bitcoins from address A''', the wallet may use unspent outputs from both address A and its derived address
 # '''When sending assets to address A''', the wallet should send assets to the derived address instead
 # '''When sending Bitcoins to address A''', the wallet should continue to send them to address A
+
+Wallets should ignore those guidelines for address schemes other than pay-to-public-key-hash.
 
 ===Example===
 
@@ -59,6 +63,10 @@ Assets inadvertently sent to a legacy wallet are recoverable by re-importing the
 The user experience for sending and receiving regular Bitcoins is unaffected.
 
 Dual-address wallets are also capable of receiving assets from Open Assets wallets that don't implement dual-address.
+
+==Acknowledgments==
+
+* <a href="mailto:barisser@gmail.com">Andrew Barisser</a>
 
 ==See Also==
 
