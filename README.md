@@ -1,0 +1,13 @@
+# Open Assets Protocol
+
+The Open Assets Protocol is a simple and powerful protocol built on top of the Bitcoin Blockchain. It allows issuance and transfer of user-created assets. The Open Assets Protocol is an evolution of the concept of colored coins.
+
+The following documents are available:
+
+* [Open Assets Protocol specification](specification.mediawiki): Specification of the core protocol
+* [Dual-Address Wallet specification](dual-address-wallets.mediawiki) (optional): Specification for a mechanism for preventing misspending of colored outputs
+
+Source code related to the Open Assets Protocol:
+
+* [`openassets` Python module](https://github.com/OpenAssets/openassets): The reference implementation of the Open Assets Protocol
+* [Colorcore](https://github.com/OpenAssets/colorcore): A client providing a command line and RPC interface for performing operations through the Open Assets Protocol
