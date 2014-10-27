@@ -1,0 +1,58 @@
+<pre>
+  Title: Open Assets Address Format
+  Author: Flavien Charlon <flavien@charlon.net>
+  Created: 16-10-2013
+</pre>
+
+==Abstract==
+
+This document describes an address representation used by clients and wallets supporting the Open Assets Protocol.
+
+==Motivation==
+
+A side-effect of the Open Assets Protocol is that a colored output can be spent incorrectly by wallets unaware of the protocol, causing the destruction of the asset encoded in the output.
+
+This documents describes a special representation for addresses called the Open Assets Address Format.
+
+==Specification==
+
+Wallets capable of correctly manipulating Open Assets outputs must:
+
+# Give the Open Assets Address Format representation of every address in the wallet capable of receiving assets, in addition to the usual address representation.
+# Refuse to send assets to an address not specified using the Open Assets Address Format.
+
+There is a one-to-one mapping between regular Bitcoin addresses and addresses represented using the Open Assets Address Format.
+
+The Open Assets Address Format representation is constructed in the following manner:
+
+    base58-encode: [one-byte namespace][one-byte version][payload][4-byte checksum]
+
+The namespace used for Open Assets is 19 (0x13 in hexadecimal). The version byte is the version byte of the original address. The payload is the payload contained in the original address. The 4-byte checksum is the first four bytes of the double SHA256 hash of the namespace, version and payload.
+
+===Example===
+
+The following address is represented using the regular address representation:
+
+    Base-58:    16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM
+    Hex:        00 010966776006953D5567439E5E39F86A0D273BEE D61967F6
+
+The first byte is the version (0x00) and the last four bytes are the checksum (0xD61967F6).
+
+The same address represented using the Open Assets Address Format is as follow:
+
+    Base-58:    akB4NBW9UuCmHuepksob6yfZs6naHtRCPNy
+    Hex:        13 00 010966776006953D5567439E5E39F86A0D273BEE 852783AA
+
+The Open Assets namespace byte is prepended. The checksum has changed as it is now calculated on the namespace, version, and hash.
+
+==Rationale==
+
+Open Assets wallets only accept to send assets to addresses specified in the Open Assets Address Format, and those addresses can only be obtained from wallets supporting Open Assets. This ensures that assets can only be sent to wallets supporting Open Assets. The receiving wallet will know how to handle colored outputs without destroying the asset information.
+
+==Backwards Compatibility==
+
+Wallets supporting Open Assets should still give the regular Bitcoin address representation to allow legacy wallets to send uncolored Bitcoins to it.
+
+==See Also==
+
+* [[specification.mediawiki|Open Assets Protocol Specification]]

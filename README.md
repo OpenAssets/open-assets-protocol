@@ -5,7 +5,7 @@ The Open Assets Protocol is a simple and powerful protocol built on top of the B
 The following documents are available:
 
 * [Open Assets Protocol specification](specification.mediawiki): Specification of the core protocol
-* [Dual-Address Wallet specification](dual-address-wallets.mediawiki) (optional): Specification for a mechanism for preventing misspending of colored outputs
+* [Open Assets Address Format specification](address-format.mediawiki): Special address format for wallets supporting Open Assets, preventing assets from being sent to legacy wallets
 
 Source code related to the Open Assets Protocol:
 
