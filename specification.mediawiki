@@ -23,26 +23,27 @@ There are many applications:
 ==Protocol Overview==
 
 Outputs using the Open Assets Protocol to store an asset have two new characteristics:
-* The '''asset address''' is a Pay-to-Script-Hash address used to uniquely identify the asset stored on the output.
+* The '''asset ID''' is a 160 bits hash, used to uniquely identify the asset stored on the output.
 * The '''asset quantity''' is an unsigned integer representing how many units of that asset are stored on the output.
 
-This document describes how the asset address and quantity of an output are calculated.
+This document describes how the asset ID and asset quantity of an output are calculated.
 
 Each output in the Blockchain can be either colored or uncolored:
-* Uncolored outputs have no asset address and no asset quantity (they are both undefined).
-* Colored outputs have a strictly positive asset quantity, and a non-null asset address.
+* Uncolored outputs have no asset ID and no asset quantity (they are both undefined).
+* Colored outputs have a strictly positive asset quantity, and a non-null asset ID.
 
-The asset address of an asset is the RIPEMD-160 hash of the SHA-256 hash of the output script referenced by the first input of the transaction that initially issued that asset (<code>script_hash = RIPEMD160(SHA256(script))</code>). An issuer can reissue more of an already existing asset as long as they retain the private key for that asset address. Assets on two different outputs can only be mixed together if they were issued by the same asset address.
+The ID of an asset is the RIPEMD-160 hash of the SHA-256 hash of the output script referenced by the first input of the transaction that initially issued that asset (<code>script_hash = RIPEMD160(SHA256(script))</code>). An issuer can reissue more of an already existing asset as long as they retain the private key for that asset ID. Assets on two different outputs can only be mixed together if they have the same asset ID.
 
-When represented in base-58, an asset address must use the Pay-to-Script-Hash version byte (5 in mainnet, 196 in testnet3), since it is a hash of a script. The base-58 representation of an asset address therefore starts with a '3' in mainnet.
+Like addresses, asset IDs can be represented in base 58. They must use version byte 23 (115 in TestNet3) when represented in base 58. The base 58 representation of an asset ID therefore starts with the character 'A' in MainNet.
 
-The process to generate an asset address and the matching private key is described in the following example:
+The process to generate an asset ID and the matching private key is described in the following example:
 # The issuer first generates a private key: <code>18E14A7B6A307F426A94F8114701E7C8E774E7F9A47E2C2035DB29A206321725</code>.
 # He calculates the corresponding address: <code>16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM</code>.
 # Next, he builds the Pay-to-PubKey-Hash script associated to that address: <code>OP_DUP OP_HASH160 010966776006953D5567439E5E39F86A0D273BEE OP_EQUALVERIFY OP_CHECKSIG</code>.
-# Finally, he hashes that script to obtain the asset address: <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>.
+# The script is hashed: <code>36e0ea8e93eaa0285d641305f4c81e563aa570a2</code>
+# Finally, the hash is converted to a base 58 string with checksum using version byte 23: <code>ALn3aK1fSuG27N96UGYB1kUYUpGKRhBuBC</code>.
 
-The private key from the first step is required to issue assets identified by the asset address <code>36hBrMeUfevFPZdY2iYSHVaP9jdLd9Np4R</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset address.
+The private key from the first step is required to issue assets identified by the asset ID <code>ALn3aK1fSuG27N96UGYB1kUYUpGKRhBuBC</code>. This acts as a digital signature, and gives the guarantee that nobody else but the original issuer is able to issue assets identified by this specific asset ID.
 
 ==Open Assets Transactions==
 
@@ -92,7 +93,7 @@ If the marker output is malformed, it is considered invalid. Coinbase transactio
 
 If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the marker output is deemed invalid. The marker output is always uncolored.
 
-After the <code>asset quantity list</code> has been used to assign an asset quantity to every output, asset addresses are assigned to outputs. Outputs before the marker output are used for asset issuance, and outputs after the marker output are used for asset transfer.
+After the <code>asset quantity list</code> has been used to assign an asset quantity to every output, asset IDs are assigned to outputs. Outputs before the marker output are used for asset issuance, and outputs after the marker output are used for asset transfer.
 
 ====Example====
 
@@ -119,25 +120,25 @@ This example illustrates how a marker output is decoded. Assuming the marker out
 
 All the outputs before the marker output are used for asset issuance.
 
-All outputs preceding the marker output and with a non-zero asset quantity get assigned the asset address identified by the RIPEMD-160 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored.
+All outputs preceding the marker output and with a non-zero asset quantity get assigned the asset ID defined as the RIPEMD-160 hash of the SHA-256 hash of the output script referenced by the first input of the transaction. Outputs that have an asset quantity of zero are uncolored.
 
 ===Asset transfer outputs===
 
 All the outputs after the marker output are used for asset transfer.
 
-The asset addresses of those outputs are determined using a method called order-based coloring.
+The asset IDs of those outputs are determined using a method called order-based coloring.
 
-Inputs are seen as a sequence of asset units, each having an asset address. Similarly, outputs are seen as a sequence of asset units to be assigned an asset address. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
+Inputs are seen as a sequence of asset units, each having an asset ID. Similarly, outputs are seen as a sequence of asset units to be assigned an asset ID. These two sequences are built by taking each input or output in order, each of them adding a number of asset units equal to their asset quantity. The process starts with the first input of the transaction and the first output after the marker output.
 
-After the sequences have been built, the asset address of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence until all the asset units in the output sequence have received an asset address. If there are less asset units in the input sequence than in the output sequence, the marker output is considered invalid.
+After the sequences have been built, the asset ID of every asset unit in the input sequence is assigned to the asset unit at the same position in the output sequence until all the asset units in the output sequence have received an asset ID. If there are less asset units in the input sequence than in the output sequence, the marker output is considered invalid.
 
-Finally, for each transfer output, if the asset units forming that output all have the same asset address, the output gets assigned that asset address. If any output contains units from more than one distinct asset address, the marker output is considered invalid. Outputs with an asset quantity of zero are always considered uncolored.
+Finally, for each transfer output, if the asset units forming that output all have the same asset ID, the output gets assigned that asset ID. If any output is mixing units with more than one distinct asset ID, the marker output is considered invalid. Outputs with an asset quantity of zero are always considered uncolored.
 
 ===Example===
 
 This is an example of an Open Assets transaction.
 
-The coloring process starts by retrieving the asset quantities and addresses of the outputs referenced by each input of the transaction. Then, the marker output is identified. In this example, it is output 2, and the <code>asset quantity list</code> field contains the following values:
+The coloring process starts by retrieving the asset quantities and asset IDs of the outputs referenced by each input of the transaction. Then, the marker output is identified. In this example, it is output 2, and the <code>asset quantity list</code> field contains the following values:
 
     0, 10, 6, 0, 7, 3
 
@@ -148,44 +149,44 @@ This list is used to assign asset quantities to outputs.
     =============================   =============================  =============================
     Input 0                         Output 0 (Issuance)            Output 0 (Issuance)
       Asset quantity:     3           Asset quantity:     0          Asset quantity:     <NULL>
-      Asset address:      A1          Asset address:                 Asset address:      <NULL>
+      Asset ID:           A1          Asset ID:                      Asset ID:           <NULL>
     -----------------------------   -----------------------------  -----------------------------
     Input 1                         Output 1 (Issuance)            Output 1 (Issuance)
       Asset quantity:     2           Asset quantity:     10         Asset quantity:     10
-      Asset address:      A1          Asset address:                 Asset address:      H
+      Asset ID:           A1          Asset ID:                      Asset ID:           H
     -----------------------------   -----------------------------  -----------------------------
     Input 2                         Output 2 (Marker)              Output 2 (Marker)
       Asset quantity:     <NULL>      Asset quantity:     <NULL>     Asset quantity:     <NULL>
-      Asset address:      <NULL>      Asset address:      <NULL>     Asset address:      <NULL>
+      Asset ID:           <NULL>      Asset ID:           <NULL>     Asset ID:           <NULL>
     -----------------------------   -----------------------------  -----------------------------
     Input 3                         Output 3 (Transfer)            Output 3 (Transfer)
       Asset quantity:     5           Asset quantity:     6          Asset quantity:     6
-      Asset address:      A1          Asset address:                 Asset address:      A1
+      Asset ID:           A1          Asset ID:                      Asset ID:           A1
     -----------------------------   -----------------------------  -----------------------------
     Input 4                         Output 4 (Transfer)            Output 4 (Transfer)
       Asset quantity:     3           Asset quantity:     0          Asset quantity:     <NULL>
-      Asset address:      A1          Asset address:                 Asset address:      <NULL>
+      Asset ID:           A1          Asset ID:                      Asset ID:           <NULL>
     -----------------------------   -----------------------------  -----------------------------
     Input 5                         Output 5 (Transfer)            Output 5 (Transfer)
       Asset quantity:     9           Asset quantity:     7          Asset quantity:     7
-      Asset address:      A2          Asset address:                 Asset address:      A1
+      Asset ID:           A2          Asset ID:                      Asset ID:           A1
     =============================   -----------------------------  -----------------------------
                                     Output 6 (Transfer)            Output 6 (Transfer)
                                       Asset quantity:     3          Asset quantity:     3
-                                      Asset address:                 Asset address:      A2
+                                      Asset ID:                      Asset ID:           A2
                                     =============================  =============================
 
 Outputs are colored from the first to the last. Outputs before the marker output are issuance outputs:
 * Output 0 has an asset quantity of zero, so it is considered uncolored.
-* Output 1 gets assigned the asset address defined by <code>H = RIPEMD160(SHA256((S))</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
+* Output 1 gets assigned the asset ID defined by <code>H = RIPEMD160(SHA256((S))</code> where <code>S</code> is the output script referenced by the first input of the transaction (input 0).
 
 Output 2 is the marker output, separating issuance outputs from transfer outputs. The marker output is always uncolored.
 
 Transfer outputs are then colored:
-* Output 3 receives 3 units from input 0, 2 units from input 1, 0 unit from input 2 and 1 unit from input 3. All the 6 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 3.
+* Output 3 receives 3 units from input 0, 2 units from input 1, 0 unit from input 2 and 1 unit from input 3. All the 6 units have the same asset ID <code>A1</code>, so the asset ID <code>A1</code> is assigned to output 3.
 * Output 4 has an asset quantity of zero, so it is considered uncolored.
-* Output 5 receives the remaining 4 units of input 3, and 3 units from input 4. All the 7 units are from asset address <code>A1</code>, so the asset address <code>A1</code> is assigned to output 5.
-* Output 6 receives the first 3 units of input 5. Input 5 is from asset address <code>A2</code> so the asset address <code>A2</code> is assigned to output 6.
+* Output 5 receives the remaining 4 units of input 3, and 3 units from input 4. All the 7 units have the same asset ID <code>A1</code>, so the asset ID <code>A1</code> is assigned to output 5.
+* Output 6 receives the first 3 units of input 5. Input 5 has the asset ID <code>A2</code> so the asset ID <code>A2</code> is assigned to output 6.
 
 ==Rationale==
 
@@ -193,13 +194,13 @@ This approach offers a number of desirable characteristics:
 
 # Economical: The cost of issuing or transferring an asset is completely independent from the quantity issued or transferred.
 # Clients have a way to identify colored outputs simply by traversing the Blockchain, without needing to be fed external data. Transactions relevant to the Open Assets Protocol are identified by the special marker output.
-# It is possible to determine the asset address and quantity of an output by traversing only a limited number of transactions.
-# Assets are pseudonymous. They are represented by an asset address, which is enough to identify each asset uniquely, while still providing an adequate level of anonymity for both the issuer and users of the asset.
+# It is possible to determine the asset ID and asset quantity of an output by traversing only a limited number of transactions.
+# Assets are pseudonymous. They are represented by an asset ID, which is enough to identify each asset uniquely, while still providing an adequate level of anonymity for both the issuer and users of the asset.
 # This approach uses the recommended way to embed data in the Blockchain (OP_RETURN), and therefore does not pollute the UTXO.
 # The whole cryptographic infrastructure that Bitcoin provides for securing the spending of outputs is reused for securing the ability to issue assets. There is a symmetry between ''an address + private key'' as a way to spend Bitcoins, and ''an address + private key'' as a way to issue assets.
 # Generating a new type of asset is as simple as generating an address, can be done offline, and for free.
-# Reissuing more of an existing asset is easy and can be done quickly and at no cost (except for the transaction fee) as long as the issuer retains the private key for the asset address.
-# Single-issue assets can be achieved by destroying the private key for the asset address immediately after issuing the asset.
+# Reissuing more of an existing asset is easy and can be done quickly and at no cost (except for the transaction fee) as long as the issuer retains the private key for the asset ID.
+# Single-issuance assets can be achieved by destroying the private key used to issue the asset immediately after issuing it.
 # Since issuance is based on standard Bitcoin output scripts, it is possible to create an asset that requires multiple signatures for issuance.
 
 ==Compatibility==
