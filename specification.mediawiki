@@ -1,7 +1,7 @@
 <pre>
   Title: Open Assets Protocol (OAP/1.0)
   Author: Flavien Charlon <flavien@charlon.net>
-  Created: 12-12-2013
+  Created: 2013-12-12
 </pre>
 
 ==Abstract==

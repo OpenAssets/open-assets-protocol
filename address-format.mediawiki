@@ -1,7 +1,7 @@
 <pre>
   Title: Open Assets Address Format
   Author: Flavien Charlon <flavien@charlon.net>
-  Created: 16-10-2013
+  Created: 2014-10-16
 </pre>
 
 ==Abstract==
