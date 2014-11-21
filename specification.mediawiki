@@ -249,7 +249,7 @@ This system has three important advantages over the original paper on the Ricard
 
 In case of conflict, the contract is handed to the arbitrer and constitute irrefutable proof : The contract can't be tampered with and is related to the Asset, is timestamped by the date of the first coin issuance, and signed by the issuer.
 
-The contract can include clauses to limit issuer's right contractually (limited issuance), and even by client software if the contract has a structured format.
+The contract can include clauses to limit issuer's right contractually (limited issuance), or limit transferability of the asset, such rules can be enforced by client software outside the Open Asset protocol as long has the contract has a known structured format.
 
 Definition Ricardian Contract : http://iang.org/papers/ricardian_contract.html
 
