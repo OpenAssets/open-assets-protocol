@@ -188,6 +188,35 @@ Transfer outputs are then colored:
 * Output 5 receives the remaining 4 units of input 3, and 3 units from input 4. All the 7 units have the same asset ID <code>A1</code>, so the asset ID <code>A1</code> is assigned to output 5.
 * Output 6 receives the first 3 units of input 5. Input 5 has the asset ID <code>A2</code> so the asset ID <code>A2</code> is assigned to output 6.
 
+==Ricardian Contract==
+
+Owning an asset confers rights which you can redeem at any time by proving ownership.
+For example, a company's share gives right to dividends, and a right to vote about decisions for the company during shareholder meeting.
+A voting token gives right to redeem or transfer decision power about an entity. (Company, election)
+
+Thus, a way is needed to attach an immutable contract to an asset which list these rights and scope, such contract can be published or confidential, but nobody should be able to refute it.
+
+Here is how to achieve such goal :
+
+An AssetId is calculated by Hash(ScriptPubKey) of the issuance coin.
+	AssetId = Hash(ScriptPubKey)
+Let's take
+	ScriptPubKey = OP_HASH160 Hash(RedeemScript) OP_EQUAL
+Where
+	RedeemScript = HASH160(contract) OP_DROP ...
+
+Now, anybody holding the asset and the contract can prove that the contract is attached, and will always be attached to the Asset.
+One can't change the contract without changing the AssetId.
+
+Now, if the issuer wants the contract to be discoverable, he can publish the link to it with the Metadata part of the Marker Output.
+
+	Metadata = "url=http://company.com/contract"
+	
+A wallet client can thus download the contract from the url, and check that.
+	HASH160(DownloadedContract) == HASH160(contract) //which can be retrieved from the Redeem
+
+Definition Ricardian Contract : http://iang.org/papers/ricardian_contract.html
+
 ==Rationale==
 
 This approach offers a number of desirable characteristics:
