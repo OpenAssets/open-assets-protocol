@@ -188,6 +188,71 @@ Transfer outputs are then colored:
 * Output 5 receives the remaining 4 units of input 3, and 3 units from input 4. All the 7 units have the same asset ID <code>A1</code>, so the asset ID <code>A1</code> is assigned to output 5.
 * Output 6 receives the first 3 units of input 5. Input 5 has the asset ID <code>A2</code> so the asset ID <code>A2</code> is assigned to output 6.
 
+==Ricardian Contract==
+
+An asset confers rights to its holder, which can be redeemed to the issuer within contractual conditions, only by proving ownership.
+
+For example, 
+* a company's share gives right to dividends,
+* A bond gives right to interests (coupons) every period, and to the principal at maturity.
+* A voting token gives right to vote decisions about an entity. (Company, election)
+* Some mix are possible : A share can also be a voting token for the company's president election,
+
+When the issuer binds cryptographically a contract to an asset, then we talk about Ricardian Contract. 
+
+The asset becomes the contract, and the contract becomes the asset, as two sides of a same coin bounded by cryptography.
+
+As explained [http://iang.org/papers/ricardian_contract.html here], a Ricardian Contract can be defined as a single document that is 
+* a) a contract offered by an issuer to holders, 
+* b) for a valuable right held by holders, and managed by the issuer, 
+* c) easily readable by people (like a contract on paper), 
+* d) readable by programs (parsable like a database), 
+* e) digitally signed, 
+* f) carries the keys and server information, and 
+* g) allied with a unique and secure identifier. 
+
+We can achieve such goals by leveraging the OP_DROP operation in the RedeemScript. 
+
+This will be possible in Bitcoin 0.10, because any script (not just standard one) with valid operators will be authorized in a RedeemScript.
+
+Given that AssetId is specified by OpenAsset in such way :
+    AssetId = Hash160(ScriptPubKey)
+Let's make such ScriptPubKey,
+    ScriptPubKey = OP_HASH160 Hash(RedeemScript) OP_EQUAL
+Where
+    RedeemScript = HASH160(contract) OP_DROP [...remaining of the script]
+
+Now, an asset's holder with the contract can prove that it is untampered, and that he owns it.
+
+One can't change the contract without changing the AssetId.
+
+Now, if the issuer wants the contract to be discoverable, he can publish the link to it with the Metadata part of the Marker Output.
+
+    Metadata = "url=http://cmpny.io/ctr"
+	
+An Open Asset client can thus download the contract from the url, and check that.
+    HASH160(DownloadedContract) == HASH160(contract) //which can be retrieved from the Redeem
+	
+* Point "a", is covered by the contract (published in the metadata url, or kept confidential by exchange through external medium),
+* Point "b", is covered by the BTC protocol, holders can proove ownership with private key, and issuer manage contracts,
+* Point "c", is covered if the contract inside the url has a structured, text based format (JSON or XML) or non structured, human readable format (PDF, docx, txt),
+* Point "d", is covered if the contract is in a structured and text based format (JSON or XML), the format depends on the type of Asset. (vote, bond, share or other)
+* Point "e", is covered by bitcoin : The issuer needs to sign the RedeemScript cointaining Hash160(contract) when he issues the Asset.
+* Point "f", is covered by the url in the metadata, if the contract published. The public keys of the issuer are disclosed by the RedeemScript during issuance. If the url is not published, whoever knows the contract can verify it against HASH160(contract) of the RedeemScript.
+* Point "g", is covered by the definition of the AssetId : Hash(ScriptPubkey) which contains the hash of the contract,
+
+This system has three important advantages over the original paper on the Ricardian Contracts : 
+
+* The contract can be kept confidential, but can be easily verified by whoever knows it,
+* The contract can be signed by more than one public key, by making the RedeemScript a multi sig,
+* The holder can decide to save a copy of the contract before making the transaction in order to protect against a malicious issuer trying to destroy the contract by making the server URL unavailable, 
+
+In case of conflict, the contract is handed to the arbitrer and constitute irrefutable proof : The contract can't be tampered with and is related to the Asset, is timestamped by the date of the first coin issuance, and signed by the issuer.
+
+The contract can include clauses to limit issuer's right contractually (limited issuance), and even by client software if the contract has a structured format.
+
+Definition Ricardian Contract : http://iang.org/papers/ricardian_contract.html
+
 ==Rationale==
 
 This approach offers a number of desirable characteristics:
