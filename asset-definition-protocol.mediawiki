@@ -26,25 +26,51 @@ The metadata association process works in three stages:
 
 ===Blockchain association===
 
-When issuing an asset, the issuer can associate it with a metadata file by specifying the following UTF8-encoded string in the metadata field of the marker output:
+When issuing an asset, the issuer can associate it with a metadata file using a string called the asset definition pointer.
+
+The asset definition pointer has the following format:
 
     u=<asset definition URL>
 
-Where <code><asset definition URL></code> is the URL-encoded absolute URL of the asset definition.
+or
 
-The current asset definition URL of a given asset is determined by clients using the following process:
+    u=<asset definition URL>&sha256=<sha256 hash>
 
-# The script responsible for issuing the asset (of which the hash is equal to the asset ID) is determined.
-# All transactions where the first input is redeeming that script, and with a valid Open Assets marker output, are retrieved from the Blockchain.
-# Transactions with an empty metadata field (zero bytes) in the marker output are excluded.
-# The last of those transactions in Blockchain order (block number, then order within the block) is retained. <p>If no such transaction if found, no metadata is associated to this asset.</p>
-# The metadata field of the marker output of that transaction is parsed as form-encoded data, and the value for the key <code>u</code> is extracted. The result is the final asset definition URL. <p>If the metadata field could not be parsed as form-encoded data or if the value for the key <code>u</code> is not a valid URL or does not exist, no metadata is associated to this asset.</p>
+Where <code><asset definition URL></code> is the absolute URL of the asset definition, and <code><sha256 hash></code> is the optional SHA-256 hash of the asset definition in hex format. Both values must be URL encoded, and the asset definition pointer is encoded using UTF-8.
 
 The asset definition URL can use any valid URI scheme (http, https, ftp, magnet, safe). Clients are free to choose which subset to support.
 
+There are two ways to associate an asset definition pointer with an asset:
+
+# Store it in the <code>metadata</code> field of the marker output when issuing the asset.
+# Use a pay-to-script-hash output whose redeem script is constructed as follow:
+
+    PUSHDATA(<asset definition pointer>) OP_DROP [remainder of the script]
+
+===Determining the asset definition pointer associated to an asset===
+
+The current asset definition file of a given asset is determined by clients using the following process:
+
+The output script responsible for issuing the asset (of which the hash is equal to the asset ID) is determined, as well as the input script used to redeem it when the asset was issued.
+
+If the following conditions are true:
+
+# The output script is a pay-to-script-hash script
+# The corresponding redeem script starts with a PUSHDATA followed by a OP_DROP
+# The PUSHDATA payload is a valid asset definition pointer (as defined in the [[#Blockchain_association|Blockchain association]] section)
+
+Then the PUSHDATA payload is the asset definition pointer, and the search stops here.
+
+Otherwise:
+
+# All transactions where the first input is redeeming that script, and with a valid Open Assets marker output, are retrieved from the Blockchain.
+# Transactions with an empty metadata field (zero bytes) in the marker output are excluded.
+# The last of those transactions in Blockchain order (block number, then order within the block) is retained. If no such transaction if found, no metadata is associated to this asset.
+# The metadata field of the marker output of that transaction is the asset definition pointer. If it has an incorrect format, no metadata is associated to this asset.
+
 ===Asset definition file===
 
-The asset definition file is hosted at the specified URL. After clients have determined the metadata resource URL, they retrieve the file, and parse its content.
+After the asset definition pointer is determined, the file stored at the given URL is retrieved. If a hash is provided in the asset definition pointer, the file is verified against it. If the file can not be retrieved or if the hash doesn't match, no metadata is associated to this asset.
 
 The file is a JSON file using the following schema:
 
@@ -71,7 +97,8 @@ This table describes each field:
 {|
 ! Field !! Description
 |-
-! asset_ids || '''(required)''' An array containing the base 58 representation of all the asset IDs authorized to use this asset definition file. Clients must verify that the ID of the asset is listed in this array.
+! asset_ids || '''(required)''' An array containing the [[specification.mediawiki#protocol-overview|base 58 representation]] of all the asset IDs authorized to use this asset definition file. Clients must verify that the ID of the asset is listed in this array.
+If the asset definition pointer was stored in the Blockchain using the pay-to-script-hash method (method 2 in the [[#Blockchain_association|Blockchain association]] section), the asset ID to be included in this list is calculated by hashing only the remainder script (without the initial PUSHDATA and OP_DROP), to work around the circular dependency problem.
 |-
 ! name_short || '''(required)''' A ticker used to denominate amounts of this asset, such as USD, MSFT, BTC. Clients may reject the asset definition if the value of this field is longer than 10 characters.
 |-
