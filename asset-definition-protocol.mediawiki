@@ -43,9 +43,11 @@ The asset definition URL can use any valid URI scheme (http, https, ftp, magnet,
 There are two ways to associate an asset definition pointer with an asset:
 
 # Store it in the <code>metadata</code> field of the marker output when issuing the asset.
-# Use a pay-to-script-hash output whose redeem script is constructed as follow:
+# Issue the asset using a pay-to-script-hash output whose redeem script is constructed as follow:
 
     PUSHDATA(<asset definition pointer>) OP_DROP [remainder of the script]
+
+With the first method, the asset definition pointer can be changed by reissuing the asset. With the second method, the asset definition pointer cannot be changed without changing the asset ID, since the asset definition pointer is part of the issuance script, and therefore determines the asset ID.
 
 ===Determining the asset definition pointer associated to an asset===
 
