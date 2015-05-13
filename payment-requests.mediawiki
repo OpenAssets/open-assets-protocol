@@ -32,7 +32,7 @@ To enable merchants and customers negotiate which payment method is supported, w
 
 OA Payment Requests use media type '''application/oa-paymentrequest''' and encoded in binary.
 
-<code>Accept:</code> header can be used by the wallet to list acceptable MIME types. If the wallet supports both regular Bitcoin payments and Open Assets, both MIME types (<code>application/bitcoin-paymentrequest,application/oa-paymentrequest</code>) are listed. If only Open Assets payment is supported, only OA-specific MIME type is used. If the merchant cannot support any of the requested types, it must return HTTP error code <code>406 Not Acceptable</code>.
+<code>Accept:</code> header can be used by the wallet to list acceptable MIME types. If the wallet supports both regular Bitcoin payments and Open Assets, both MIME types (<code>application/bitcoin-paymentrequest</code>, <code>application/oa-paymentrequest</code>) are listed. If only Open Assets payment is supported, only OA-specific MIME type is used. If the merchant cannot support any of the requested types, it must return HTTP error code <code>406 Not Acceptable</code>.
 
 ===Payment URI===
 
