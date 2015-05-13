@@ -7,6 +7,7 @@ The following documents are available:
 * [Open Assets Protocol specification](specification.mediawiki): Specification of the core protocol
 * [Open Assets Address Format specification](address-format.mediawiki): Special address format for wallets supporting the Open Assets Protocol, preventing assets from being sent to legacy wallets
 * [Asset Definition Protocol specification](asset-definition-protocol.mediawiki): A protocol built on top of the Open Assets Protocol for associating an asset with metadata
+* [Payment Requests specification](payment-requests.mediawiki): extensions to [BIP-70](https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki) and [BIP-21](https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki) describing payments in terms of assets instead of (or together with) regular bitcoins
 
 Source code related to the Open Assets Protocol:
 
