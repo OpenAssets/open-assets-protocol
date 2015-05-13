@@ -26,9 +26,9 @@ The metadata association process works in three stages:
 
 ===Blockchain association===
 
-When issuing an asset, the issuer can associate it with a metadata file using a string called the asset definition pointer.
+When issuing an asset, the issuer can associate it with a metadata file using a string called the 'asset definition pointer'.
 
-The asset definition pointer has the following format:
+The '''asset definition pointer''' has the following format:
 
     u=<asset definition URL>
 
@@ -36,9 +36,15 @@ or
 
     u=<asset definition URL>&sha256=<sha256 hash>
 
-Where <code><asset definition URL></code> is the absolute URL of the asset definition, and <code><sha256 hash></code> is the optional SHA-256 hash of the asset definition in hex format. Both values must be URL encoded, and the asset definition pointer is encoded using UTF-8.
+or
+
+    h<binary hash160> (21 bytes)
+
+Where <code><asset definition URL></code> is the absolute URL of the asset definition, and <code><sha256 hash></code> is the optional SHA-256 hash of the asset definition in hex format. Both values must be URL-encoded, and the asset definition pointer is encoded using UTF-8. 
 
 The asset definition URL can use any valid URI scheme (http, https, ftp, magnet, safe). Clients are free to choose which subset to support.
+
+The compact form starting with <code>h</code> serves two purposes: to fit in the marker output (limited to 40 bytes by IsStandard checks as of May 2015) and to provide privacy for parties exchanging the asset. The compact form uses Bitcoin <code>Hash160</code> function defined as <code>RIPEMD-160(SHA-256(asset definition))</code>. If the compact form is used, clients should use one or more pre-defined locations to fetch the data from. These could be generic well-known asset tracking servers or servers known for a given application or a given asset ID.
 
 There are two ways to associate an asset definition pointer with an asset:
 
