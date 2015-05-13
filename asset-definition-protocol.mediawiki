@@ -26,7 +26,7 @@ The metadata association process works in three stages:
 
 ===Blockchain association===
 
-When issuing an asset, the issuer can associate it with a metadata file using a string called the 'asset definition pointer'.
+When issuing an asset, the issuer can associate it with a metadata file using a string called the '''asset definition pointer'''.
 
 The '''asset definition pointer''' has the following format:
 
