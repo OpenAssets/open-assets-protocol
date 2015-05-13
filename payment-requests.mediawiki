@@ -1,6 +1,7 @@
 <pre>
   Title: Open Assets Extensions to Payment Requests
   Authors: Devon Gundry <devongundry@chain.com>, Oleg Andreev <oleganza@chain.com>
+  Status: Draft
   Created: 2015-05-06
 </pre>
 
