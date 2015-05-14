@@ -33,7 +33,7 @@ The tags <code>4001</code> and <code>4002</code> are chosen to avoid conflict wi
 
 ===Open Assets Atomic Swap===
 
-To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what merchant offers to the customer in return for his payment.
+To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what merchant offers to the customer in return for payment.
 
 <pre>
     message PaymentDetails {
