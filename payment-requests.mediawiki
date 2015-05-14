@@ -13,19 +13,51 @@ This document defines extensions to [https://github.com/bitcoin/bips/blob/master
 
 Applications that receive Open Assets transfers need a way to establish payment details with the payee in a convenient and secure manner. Payees need a standard mechanism to support both pure Bitcoin payments and Open Assets payments (or instead require only one of them as acceptable).
 
+Standard Bitcoin payments involve only one asset: bitcoins. Open Assets protocol opens up a possibility for many different assets. Therefore, it becomes interesting to enable risk-free atomic swaps of one asset for another, or for pure ("non-colored") bitcoins. This specification covers how this could be done.
+
 ==Specification==
 
 ===Open Assets Payment Request===
 
 To enable merchants accept payments in Open Assets units, we propose the following extension to [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP-70].
 
-# Payment request must contain <code>payment_details_version</code> with value <code>0x4f41</code> to prevent incompatible (OA-unaware) wallets sending funds to this payment request. (<code>0x4f41</code> is the same prefix as used in OA marker).
+# Payment Request must contain <code>payment_details_version</code> with value <code>0x4f41</code> to prevent incompatible (OA-unaware) wallets sending funds to this payment request. (<code>0x4f41</code> is the same prefix as used in OA marker).
 # <code>Output</code> message is extended with a field <code>optional bytes asset_id = 4001;</code> containing a 160-bit binary Asset ID (<code>RIPEMD-160(SHA-256(issuing script))</code>).
 # <code>Output</code> message is extended with a field <code>optional uint64 asset_amount = 4002;</code> containing an amount of units.
 
 Optional field <code>output.amount</code> MUST NOT be specified (it's reserved for future use). Sender should put enough satoshis to pass the dust limit (546 per simple output as of April 2015). That's the same kind of responsibility on the sender as adding enough mining fees to the entire transaction.
 
+If <code>output.amount</code> is specified, then <code>output.asset_id</code> and <code>output.asset_amount</code> MUST NOT be specified. This means that the output is a plain bitcoin output.
+
 The tags <code>4001</code> and <code>4002</code> are chosen to avoid conflict with future extensions to v1 payment requests (so they can be ported to OA payment requests too).
+
+===Open Assets Atomic Swap===
+
+To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what merchant offers to the customer in return for his payment.
+
+<pre>
+    message PaymentDetails {
+        optional string network = 1 [default = "main"];
+        repeated Output outputs = 2;
+        (...)
+        repeated Input inputs = 8;
+    }
+    message Input {
+        required bytes txhash = 1;
+        required uint32 index = 2;
+    }
+</pre>
+{|
+| txhash || a binary 32-byte hash of the transaction being spent by the input
+|-
+| index || index of the output in the transaction referenced by <code>txhash</code>.
+|}
+
+Using input references client is able to determine which assets are being proposed and how much. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or non-colored bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and raw bitcoins.
+
+Client must include all specified inputs and outputs with empty signature scripts into the transaction '''before''' any of its own inputs and outputs.
+
+If inputs are specified, transaction should not be relayed to the network (because it is not fully signed yet), but instead should be sent directly to the merchant via <code>PaymentDetails.payment_url</code> wrapped in a '''Payment''' message. Payment Request with inputs must contain a valid payment URL, otherwise it should be rejected.
 
 ===MIME types for Open Assets Payment Requests===
 
