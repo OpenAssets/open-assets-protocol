@@ -13,7 +13,7 @@ This document defines extensions to [https://github.com/bitcoin/bips/blob/master
 
 Applications that receive Open Assets transfers need a way to establish payment details with the payee in a convenient and secure manner. Payees need a standard mechanism to support both pure Bitcoin payments and Open Assets payments (or instead require only one of them as acceptable).
 
-Standard Bitcoin payments involve only one asset: bitcoins. Open Assets protocol opens up a possibility for many different assets. Therefore, it becomes interesting to enable risk-free atomic swaps of one asset for another, or for pure ("non-colored") bitcoins. This specification covers how this could be done.
+Standard Bitcoin payments involve only one asset: bitcoins. The Open Assets Protocol opens up the possibility for many different assets. Therefore, it becomes interesting to enable risk-free atomic swaps of one asset for another, or for pure ("non-colored") bitcoins. This specification describes how this can be accomplished in a single transaction.
 
 ==Specification==
 
@@ -33,7 +33,7 @@ The tags <code>4001</code> and <code>4002</code> are chosen to avoid conflict wi
 
 ===Open Assets Atomic Swap===
 
-To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what merchant offers to the customer in return for payment.
+To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what the merchant offers to the customer in return for payment.
 
 <pre>
     message PaymentDetails {
@@ -53,9 +53,9 @@ To enable atomic swaps of bitcoins and assets (in any combination) we introduce 
 | index || index of the output in the transaction referenced by <code>txhash</code>.
 |}
 
-Using input references client is able to determine which assets are being proposed and how much. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or non-colored bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and raw bitcoins.
+Using input references, client is able to determine which assets and amounts are being proposed.. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or pure bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and pure bitcoins.
 
-Client must include all specified inputs and outputs with empty signature scripts into the transaction '''before''' any of its own inputs and outputs.
+Client must include all specified inputs and outputs with empty signature scripts in the transaction '''before''' any of its own inputs and outputs.
 
 If inputs are specified, transaction should not be relayed to the network (because it is not fully signed yet), but instead should be sent directly to the merchant via <code>PaymentDetails.payment_url</code> wrapped in a '''Payment''' message. Payment Request with inputs must contain a valid payment URL, otherwise it should be rejected.
 
