@@ -53,7 +53,7 @@ To enable atomic swaps of bitcoins and assets (in any combination) we introduce 
 | index || index of the output in the transaction referenced by <code>txhash</code>.
 |}
 
-Using input references, client is able to determine which assets and amounts are being proposed.. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or pure bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and pure bitcoins.
+Using input references, client is able to determine which assets and amounts are being proposed. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or pure bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and pure bitcoins.
 
 Client must include all specified inputs and outputs with empty signature scripts in the transaction '''before''' any of its own inputs and outputs.
 
