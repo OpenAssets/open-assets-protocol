@@ -55,7 +55,9 @@ To enable atomic swaps of bitcoins and assets (in any combination) we introduce 
 
 Using input references, client is able to determine which assets and amounts are being proposed. Merchant should use '''Output''' fields to define necessary change in terms of assets and/or pure bitcoins. Client should take into account both inputs and outputs when computing net transferred value in terms of assets and pure bitcoins.
 
-Client must include all specified inputs and outputs with empty signature scripts in the transaction '''before''' any of its own inputs and outputs.
+Client must include all specified inputs and use empty signature scripts for each of them.
+
+Client must include specified inputs and outputs in the transaction '''before''' any of its own inputs and outputs.
 
 If inputs are specified, transaction should not be relayed to the network (because it is not fully signed yet), but instead should be sent directly to the merchant via <code>PaymentDetails.payment_url</code> wrapped in a '''Payment''' message. Payment Request with inputs must contain a valid payment URL, otherwise it should be rejected.
 
