@@ -7,43 +7,77 @@
 
 ==Abstract==
 
-This document defines extensions to [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP-70], [https://github.com/bitcoin/bips/blob/master/bip-0071.mediawiki BIP-71], [https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki BIP-72] and [https://github.com/bitcoin/bips/blob/master/bip-0073.mediawiki BIP-73] to allow clients support payments using Open Assets protocol.
+This document defines extensions to [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP-70], [https://github.com/bitcoin/bips/blob/master/bip-0071.mediawiki BIP-71], [https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki BIP-72] and [https://github.com/bitcoin/bips/blob/master/bip-0073.mediawiki BIP-73] to allow clients to support payments using the Open Assets Protocol.
 
 ==Motivation==
 
-Applications that receive Open Assets transfers need a way to establish payment details with the payee in a convenient and secure manner. Payees need a standard mechanism to support both pure Bitcoin payments and Open Assets payments (or instead require only one of them as acceptable).
+Merchants that receive Open Assets payments need a convenient and secure way to establish payment details with their customers. Customers need a standard mechanism to support both pure Bitcoin payments and Open Assets payments (or instead, specify only one of them as acceptable).
+
+Standard Bitcoin payments involve only one asset: bitcoins. The Open Assets Protocol opens up the possibility for many different assets. Therefore, it becomes interesting to enable risk-free atomic swaps of one asset for another, or for pure ("non-colored") bitcoins. This specification describes how this can be accomplished in a single transaction.
 
 ==Specification==
 
 ===Open Assets Payment Request===
 
-To enable merchants accept payments in Open Assets units, we propose the following extension to [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP-70].
+To enable merchants to accept payments in Open Assets units, we propose the following extension to [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP-70].
 
-# Payment request must contain <code>payment_details_version</code> with value <code>0x4f41</code> to prevent incompatible (OA-unaware) wallets sending funds to this payment request. (<code>0x4f41</code> is the same prefix as used in OA marker).
-# <code>Output</code> message is extended with a field <code>optional bytes asset_id = 4001;</code> containing a 160-bit binary Asset ID (<code>RIPEMD-160(SHA-256(issuing script))</code>).
-# <code>Output</code> message is extended with a field <code>optional uint64 asset_amount = 4002;</code> containing an amount of units.
+# A Payment Request must contain <code>payment_details_version</code> with value <code>0x4f41</code> to prevent incompatible (Open Assets-unaware) wallets from sending funds. (<code>0x4f41</code> is the same prefix as used in the OA marker).
+# The <code>Output</code> message is extended with a field <code>optional bytes asset_id = 4001;</code> containing a 160-bit binary Asset ID (<code>RIPEMD-160(SHA-256(issuing script))</code>).
+# The <code>Output</code> message is extended with a field <code>optional uint64 asset_amount = 4002;</code> containing an amount of units.
 
-Optional field <code>output.amount</code> MUST NOT be specified (it's reserved for future use). Sender should put enough satoshis to pass the dust limit (546 per simple output as of April 2015). That's the same kind of responsibility on the sender as adding enough mining fees to the entire transaction.
+The optional field <code>output.amount</code> MUST NOT be specified (it's reserved for future use). The sender should include enough satoshis to exceed the dust limit (546 per simple output as of April 2015). This is similar to the responsibility of adding adequate mining fees to the transaction.
 
-The tags <code>4001</code> and <code>4002</code> are chosen to avoid conflict with future extensions to v1 payment requests (so they can be ported to OA payment requests too).
+If <code>output.amount</code> is specified, then <code>output.asset_id</code> and <code>output.asset_amount</code> MUST NOT be specified. This means that the output is a pure bitcoin output.
+
+The tags <code>4001</code> and <code>4002</code> are chosen to avoid conflict with future extensions to v1 payment requests (so they can also be ported to Open Assets compatibility in the future).
+
+===Open Assets Atomic Swap===
+
+To enable atomic swaps of bitcoins and assets (in any combination) we introduce a repeated field '''Input'''. Inputs define what the merchant offers to the customer in return for payment.
+
+<pre>
+    message PaymentDetails {
+        optional string network = 1 [default = "main"];
+        repeated Output outputs = 2;
+        (...)
+        repeated Input inputs = 8;
+    }
+    message Input {
+        required bytes txhash = 1;
+        required uint32 index = 2;
+    }
+</pre>
+{|
+| txhash || a binary 32-byte hash of the transaction being spent by the input
+|-
+| index || index of the output in the transaction referenced by <code>txhash</code>
+|}
+
+Using input references, the client is able to determine which assets and amounts are being proposed. The merchant should use '''Output''' fields to define any necessary transaction change (assets and/or pure bitcoins). The client should take into account both inputs and outputs when computing net transferred value in terms of assets and pure bitcoins.
+
+The client must include all specified inputs and use empty signature scripts for each of them.
+
+The client must include specified inputs and outputs in the transaction '''before''' any of its own inputs and outputs.
+
+If inputs are specified, the transaction should not be relayed to the network (because it is not fully signed yet), but instead should be sent directly to the merchant via <code>PaymentDetails.payment_url</code> wrapped in a '''Payment''' message. A Payment Request with inputs must contain a valid payment URL, otherwise it should be rejected.
 
 ===MIME types for Open Assets Payment Requests===
 
-To enable merchants and customers negotiate which payment method is supported, we propose the following extension to [https://github.com/bitcoin/bips/blob/master/bip-0071.mediawiki BIP-71] and [https://github.com/bitcoin/bips/blob/master/bip-0073.mediawiki BIP-73]. 
+To enable merchants and customers to negotiate which Payment Request type is supported, we propose the following extension to [https://github.com/bitcoin/bips/blob/master/bip-0071.mediawiki BIP-71] and [https://github.com/bitcoin/bips/blob/master/bip-0073.mediawiki BIP-73]. 
 
-OA Payment Requests use media type '''application/oa-paymentrequest''' and encoded in binary.
+Open Assets Payment Requests use media type '''application/oa-paymentrequest''' and are encoded in binary.
 
-<code>Accept:</code> header can be used by the wallet to list acceptable MIME types. If the wallet supports both regular Bitcoin payments and Open Assets, both MIME types (<code>application/bitcoin-paymentrequest</code>, <code>application/oa-paymentrequest</code>) are listed. If only Open Assets payment is supported, only OA-specific MIME type is used. If the merchant cannot support any of the requested types, it must return HTTP error code <code>406 Not Acceptable</code>.
+The <code>Accept:</code> HTTP header can be used by the wallet to list acceptable MIME types. If the wallet supports both regular Bitcoin payments and Open Assets payments, both MIME types (<code>application/bitcoin-paymentrequest</code>, <code>application/oa-paymentrequest</code>) are listed. If only Open Assets payments are supported, only the Open Assets MIME type is used. If the merchant cannot support any of the requested types, it must return HTTP error code <code>406 Not Acceptable</code>.
 
 ===Payment URI===
 
-To enable direct payments to an address, we propose an extension to Bitcoin URI ([https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki BIP-21], [https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki BIP-72]).
+To enable direct payments to an address, we propose an extension to the Bitcoin URI ([https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki BIP-21], [https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki BIP-72]).
 
-# In addition to <code>bitcoin:</code> schema we introduce <code>openassets:</code> schema to allow merchants ensure Open Assets-compatible software to handle the requests (so that OS does not launch regular Bitcoin wallets).
-# Instead of normal address encoding, Open Assets encoding must be used according to [[address-format.mediawiki|Address Format Specification]].
-# In addition to existing query string parameters (such as '''r''' and '''amount'''), we introduce '''asset''' which must declare an Asset ID as defined by [[specification.mediawiki|Open Assets Protocol Specification]].
+# In addition to the <code>bitcoin:</code> scheme, we introduce the <code>openassets:</code> scheme. This allows merchants to ensure that clients use Open Assets-compatible software to handle Open Assets payments (instead of launching regular Bitcoin wallets).
+# Instead of standard bitcoin address encoding, Open Assets address encoding must be used according to the [[address-format.mediawiki|Address Format Specification]].
+# In addition to existing query string parameters (such as '''r''' and '''amount'''), we introduce '''asset''', which must declare an Asset ID as defined by the [[specification.mediawiki|Open Assets Protocol Specification]].
 
-Note: merchants that support both regular bitcoin payments and OA payments should use <code>bitcoin:</code> schema and detect the client's intent using <code>Accept:</code> HTTP header. If such URI is opened by a wallet that is unaware of Open Assets, it will detect incompatible address encoding and decline payment.
+Note: merchants that support both regular bitcoin payments and Open Assets payments should use <code>bitcoin:</code> scheme and detect the client's intent using the <code>Accept:</code> HTTP header. If such URI is opened by a wallet that is unaware of Open Assets, it will detect incompatible address encoding and decline payment.
 
 ==See Also==
 
