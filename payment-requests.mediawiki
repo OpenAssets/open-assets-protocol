@@ -75,7 +75,8 @@ To enable direct payments to an address, we propose an extension to the Bitcoin 
 
 # In addition to the <code>bitcoin:</code> scheme, we introduce the <code>openassets:</code> scheme. This allows merchants to ensure that clients use Open Assets-compatible software to handle Open Assets payments (instead of launching regular Bitcoin wallets).
 # Instead of standard bitcoin address encoding, Open Assets address encoding must be used according to the [[address-format.mediawiki|Address Format Specification]].
-# In addition to existing query string parameters (such as '''r''' and '''amount'''), we introduce '''asset''', which must declare an Asset ID as defined by the [[specification.mediawiki|Open Assets Protocol Specification]].
+# '''amount''' parameter must be formatted as integer if the address is present and formatted according to [[address-format.mediawiki|Open Assets Address Format Specification]].
+# We introduce additional query string parameter '''asset''', which must declare an Asset ID as defined by the [[specification.mediawiki|Open Assets Protocol Specification]].
 
 Note: merchants that support both regular bitcoin payments and Open Assets payments should use <code>bitcoin:</code> scheme and detect the client's intent using the <code>Accept:</code> HTTP header. If such URI is opened by a wallet that is unaware of Open Assets, it will detect incompatible address encoding and decline payment.
 
