@@ -25,7 +25,7 @@ To enable merchants to accept payments in Open Assets units, we propose the foll
 # The <code>Output</code> message is extended with a field <code>optional bytes asset_id = 4001;</code> containing a 160-bit binary Asset ID (<code>RIPEMD-160(SHA-256(issuing script))</code>).
 # The <code>Output</code> message is extended with a field <code>optional uint64 asset_amount = 4002;</code> containing an amount of units.
 
-The optional field <code>output.amount</code> MUST NOT be specified (it's reserved for future use). The sender should include enough satoshis to exceed the dust limit (546 per simple output as of April 2015). This is similar to the responsibility of adding adequate mining fees to the transaction.
+If <code>output.asset_id</code> is specified, then field <code>output.amount</code> MUST NOT be specified or MUST equal zero (non-zero values are reserved for future use). The sender should include enough satoshis to exceed the dust limit (546 per simple output as of April 2015). This is similar to the responsibility of adding adequate mining fees to the transaction.
 
 If <code>output.amount</code> is specified, then <code>output.asset_id</code> and <code>output.asset_amount</code> MUST NOT be specified. This means that the output is a pure bitcoin output.
 
