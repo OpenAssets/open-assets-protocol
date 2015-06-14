@@ -7,37 +7,35 @@
 
 ==Abstract==
 
-This document defines a protocol to negotiate exact payment methods involving multiple assets before payment is finalized using [[payment-requests.mediawiki|Open Assets Payment Requests]].
+This document defines a protocol for negotiating the assets to be included in an [[payment-requests.mediawiki|Open Assets Payment Request]].
 
 ==Motivation==
 
 [[payment-requests.mediawiki|Payment requests]] help communicate exact transaction requirements to the client. 
 The payment response is either a failure to pay, or a complete transaction exactly satisfying the Payment Request.
 
-This specification solves a problem preceding the actual payment: how do payer and payee negotiate which kinds of assets are acceptable for an upcoming transaction.
+This specification solves a problem preceding the actual payment: how do a payer and a payee negotiate which kinds of assets are acceptable for an upcoming transaction?
 [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70] does not address this problem because it deals with only one kind of asset, Bitcoin.
 
-We introduce three kinds of new messages (using Protocol Buffers encoding like in [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70]): 
+We introduce three new types of messages (using the same Protocol Buffers encoding as [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70]): 
 
-* '''Payment Method Request''' contains information about acceptable payment options that payer may use. Merchant sends this message to a customer.
-* '''Payment Method''' contains exact payment options (kinds and amounts of assets) that the payer is willing to use. Customer sends this as a reply to a merchant. In response, merchant either replies with a finalized [[payment-requests.mediawiki|Payment Request]] or with a Payment Method Rejection message.
-* '''Payment Method Rejection''' contains detailed reason for failure to accept customer-chosen payment methods.
+* A '''Payment Method Request''' contains information about the acceptable payment options. A merchant sends this message to a customer.
+* A '''Payment Method''' contains the exact payment method (types and amounts of assets) that will be used for payment. A customer sends this message to a merchant in reply to a Payment Method Request. A merchant then either replies with a finalized [[payment-requests.mediawiki|Payment Request]] or a Payment Method Rejection message.
+* A '''Payment Method Rejection''' contains information about why the supplied Payment Method is not acceptable.
 
 ==Example==
 
-Merchant may offer a customer to pay using various different assets (e.g. different point cards issued by merchant's partners), offer a way to tip and donate to some charities.
+During the checkout process, a merchant terminal presents a QR code to a customer. The customer scans the QR code with a client wallet to retrieve a Payment Method Request message, which conveys that the merchant accepts both merchant gift card dollars and merchant loyalty points for payment. The message also conveys that the merchant accepts tips (gratuity).
 
-Client selects from available cards (either automatically, or with interactive UI), asks the customer to enter the tip and check or uncheck the donation option.
+The client wallet recognizes that the customer has both merchant gift card dollars and merchant loyalty points available and prompts the customer to select one or both for payment. The customer selects gift card dollars. The client wallet then prompts the customer to enter a tip. The customer enters a tip and confirms payment. The client wallet then composes a Payment Method message and returns it to the merchant terminal.
 
-Merchant receives details of the available assets, preferred amounts. Merchant composes a concrete payment request specifying assets and amounts with client's response and returns it to the client.
-
-Client receives the payment request, displays summary to the customer for confirmation, composes transaction and sends it out to the merchant.
+The merchant terminal uses the Payment Method message to compose a Payment Request message and returns it to the client wallet. The client wallet then composes the transaction and sends it to the merchant terminal in a Payment message. The merchant terminal displays a payment confirmation to the customer.
 
 ==Specification==
 
 ===Payment Method Request===
 
-Like a [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki Payment Request], Payment Method Request is optionally tied to merchant's identity and signed.
+Like a [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki Payment Request], a Payment Method Request is optionally tied to a merchant's identity and signed with an x.509 certificate.
 
 <pre>
     message PaymentMethodRequest {
@@ -99,7 +97,7 @@ the signature). Before serialization, the signature field must be set to an empt
 
 ===Payment Item===
 
-Each item has a type. The default type is "default" which means the ordinary payment. Different types should be used for different behavior or different UI. For instance, "tip" type may be used to let wallet application ask user to add a tip. Another type "deposit" can be used to communicate that this payment will normally be refunded and may be paid with different assets. Types other that "default" are beyond the scope of this specification.
+Each item has a type. The default type is "default". Different types could be used in various applications. For example, "tip" type could be used to prompt a customer to add gratuity. Another type "donation" could be used to prompt a customer to donate to a charity.  However, types other than "default" are beyond the explicit scope of this specification.
 
 <pre>
     message PaymentItem {
@@ -152,9 +150,9 @@ Each item has a type. The default type is "default" which means the ordinary pay
 
 ===Payment Method===
 
-When client chooses a payment method, it replies to '''payment_method_url''' with a PaymentMethod message.
+When a client chooses a payment method, it replies to the '''payment_method_url''' with a PaymentMethod message.
 
-Merchant may match PaymentMethodItem with PaymentItem objects using either '''type''' or '''item_identifier''' fields. For type "invoice" there is usually one field and there is no need to specify '''item_identifier'''. Client must copy both '''type''' and '''item_identifier''' to corresponding PaymentMethodItem objects (if they are present).
+The merchant may match a PaymentMethodItem with PaymentItem objects using either '''type''' or '''item_identifier''' fields. For type "default", there is usually one field, and therefore, there is no need to specify '''item_identifier'''. The client must copy both '''type''' and '''item_identifier''' to corresponding PaymentMethodItem objects (if they are present).
 
 <pre>
     message PaymentMethod {
@@ -175,7 +173,7 @@ Merchant may match PaymentMethodItem with PaymentItem objects using either '''ty
 </pre>
 
 {|
-| merchant_data || Copied from PaymentMethodDetails.merchant_data. Merchants may use invoice numbers or any other data they require to match Payments to  PaymentRequests. Note that malicious clients may modify the merchant_data, so should be authenticated in some way (for example, signed with a merchant-only key).
+| merchant_data || Copied from PaymentMethodDetails.merchant_data. Merchants may use invoice numbers or any other data they require to match Payments to  PaymentRequests. Note that malicious clients may modify the merchant_data, so it should be authenticated in some way (for example, signed with a merchant-only key).
 |-
 | items || List of PaymentMethodItem objects describing assets and amounts used to pay for the corresponding PaymentItem.
 |-
@@ -193,9 +191,9 @@ Merchant may match PaymentMethodItem with PaymentItem objects using either '''ty
 
 ===Payment Method Rejection===
 
-If client specifies unsupported assets or invalid amounts, then merchant may reply with a detailed description of why payment method negotiation failed.
+If a client specifies unsupported assets or invalid amounts, a merchant may reply with a detailed description of why the payment method negotiation failed.
 
-Rejection message may contain zero or more reasons for rejecting specific assets.
+The rejection message may contain zero or more reasons for rejecting specific assets.
 
 <pre>
     message PaymentMethodRejection {
@@ -215,11 +213,11 @@ Rejection message may contain zero or more reasons for rejecting specific assets
 |-
 | rejected_assets || Optional list of per-asset rejection reasons.
 |-
-| code || Optional merchant-defined numeric code of the error. Clients may use it for debugging purposes or to display appropriate UI.
+| code || Optional merchant-defined numeric code of the error. Clients may use this for debugging purposes or to display appropriate UI.
 |-
-| asset_id || Identifier of an asset that caused rejection.
+| asset_id || Identifier of the asset that caused rejection.
 |-
-| reason || Human-readable reason for rejecting the given asset.
+| reason || Human-readable reason for rejecting the asset.
 |}
 
 
