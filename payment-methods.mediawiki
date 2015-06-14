@@ -19,8 +19,8 @@ This specification solves a problem preceding the actual payment: how do a payer
 
 We introduce three new types of messages (using the same Protocol Buffers encoding as [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70]): 
 
-* A '''Payment Method Request''' contains information about the acceptable payment options. A merchant sends this message to a customer.
-* A '''Payment Method''' contains the exact payment method (types and amounts of assets) that will be used for payment. A customer sends this message to a merchant in reply to a Payment Method Request. A merchant then either replies with a finalized [[payment-requests.mediawiki|Payment Request]] or a Payment Method Rejection message.
+* A '''Payment Method Request''' contains information about the acceptable payment options. The merchant sends this message to the customer.
+* A '''Payment Method''' contains the exact payment method (types and amounts of assets) that will be used for payment. The customer sends this message to the merchant in reply to a Payment Method Request. The merchant then either replies with a finalized [[payment-requests.mediawiki|Payment Request]] or a Payment Method Rejection message.
 * A '''Payment Method Rejection''' contains information about why the supplied Payment Method is not acceptable.
 
 ==Example==
@@ -191,7 +191,7 @@ The merchant may match a PaymentMethodItem with PaymentItem objects using either
 
 ===Payment Method Rejection===
 
-If a client specifies unsupported assets or invalid amounts, a merchant may reply with a detailed description of why the payment method negotiation failed.
+If the client specifies unsupported assets or invalid amounts, the merchant may reply with a detailed description of why the payment method negotiation failed.
 
 The rejection message may contain zero or more reasons for rejecting specific assets.
 
