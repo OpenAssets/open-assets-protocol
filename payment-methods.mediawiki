@@ -20,7 +20,7 @@ This specification solves a problem preceding the actual payment: how do payer a
 We introduce three kinds of new messages (using Protocol Buffers encoding like in [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70]): 
 
 * '''Payment Method Request''' contains information about acceptable payment options that payer may use. Merchant sends this message to a customer.
-* '''Payment Method''' contains exact payment options (kinds and amounts of assets) that the payer is willing to use. Customer sends this as a reply to a merchant. In response, merchant either replies with a finalized [[Payment Request|payment-requests.mediawiki]] or with a Payment Method Rejection message.
+* '''Payment Method''' contains exact payment options (kinds and amounts of assets) that the payer is willing to use. Customer sends this as a reply to a merchant. In response, merchant either replies with a finalized [[payment-requests.mediawiki|Payment Request]] or with a Payment Method Rejection message.
 * '''Payment Method Rejection''' contains detailed reason for failure to accept customer-chosen payment methods.
 
 ==Example==
