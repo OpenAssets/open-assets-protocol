@@ -1,0 +1,239 @@
+<pre>
+  Title: Open Assets Payment Method Protocol
+  Authors: Oleg Andreev <oleganza@chain.com>, Devon Gundry <devongundry@chain.com>
+  Status: Draft
+  Created: 2015-05-06
+</pre>
+
+==Abstract==
+
+This document defines a protocol to negotiate exact payment methods involving multiple assets before payment is finalized using [[payment-requests.mediawiki|Open Assets Payment Requests]].
+
+==Motivation==
+
+[[payment-requests.mediawiki|Payment requests]] help communicate exact transaction requirements to the client. 
+The payment response is either a failure to pay, or a complete transaction exactly satisfying the Payment Request.
+
+This specification solves a problem preceding the actual payment: how do payer and payee negotiate which kinds of assets are acceptable for an upcoming transaction.
+[https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70] does not address this problem because it deals with only one kind of asset, Bitcoin.
+
+We introduce three kinds of new messages (using Protocol Buffers encoding like in [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki BIP70]): 
+
+* '''Payment Method Request''' contains information about acceptable payment options that payer may use. Merchant sends this message to a customer.
+* '''Payment Method''' contains exact payment options (kinds and amounts of assets) that the payer is willing to use. Customer sends this as a reply to a merchant. In response, merchant either replies with a finalized [[Payment Request|payment-requests.mediawiki]] or with a Payment Method Rejection message.
+* '''Payment Method Rejection''' contains detailed reason for failure to accept customer-chosen payment methods.
+
+==Example==
+
+Merchant may offer a customer to pay using various different assets (e.g. different point cards issued by merchant's partners), offer a way to tip and donate to some charities.
+
+Client selects from available cards (either automatically, or with interactive UI), asks the customer to enter the tip and check or uncheck the donation option.
+
+Merchant receives details of the available assets, preferred amounts. Merchant composes a concrete payment request specifying assets and amounts with client's response and returns it to the client.
+
+Client receives the payment request, displays summary to the customer for confirmation, composes transaction and sends it out to the merchant.
+
+==Specification==
+
+===Payment Method Request===
+
+Like a [https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki Payment Request], Payment Method Request is optionally tied to merchant's identity and signed.
+
+<pre>
+    message PaymentMethodRequest {
+        optional uint32 payment_details_version           = 1 [default = 1];
+        optional string pki_type                          = 2 [default = "none"];
+        optional bytes  pki_data                          = 3;
+        required bytes  serialized_payment_method_details = 4;
+        optional bytes  signature                         = 5;
+    }
+</pre>
+
+The meaning and signature validation logic for PaymentMethodRequest is the same as in BIP70.
+
+{|
+| payment_method_details || See below for a discussion of versioning/upgrading.
+|-
+| pki_type  || Public-key infrastructure (PKI) system being used to identify the merchant. All implementation should support "none", "x509+sha256" and "x509+sha1".
+|-
+| pki_data || PKI-system data that identifies the merchant and can be used to create a digital signature. In the case of X.509 certificates, pki_data contains one or more X.509 certificates (see Certificates section below).
+|-
+| serialized_payment_method_details || A protocol-buffer serialized PaymentMethodDetails message.
+|-
+| signature || digital signature over a hash of the protocol buffer serialized variation of the PaymentMethodRequest message,
+with all serialized fields serialized in numerical order (all current protocol buffer implementations serialize
+fields in numerical order) and signed using the private key that corresponds to the public key in pki_data. Optional fields that are not set
+are not serialized (however, setting a field to its default value will cause it to be serialized and will affect
+the signature). Before serialization, the signature field must be set to an empty value so that the field is included in the signed PaymentMethodRequest hash but contains no data.
+|}
+
+===Payment Method Details===
+
+<pre>
+    message PaymentMethodDetails {
+        optional string        network            = 1 [default = "main"];
+        required string        payment_method_url = 2;
+        repeated PaymentItem   items              = 3;
+        required uint64        time               = 4;
+        optional uint64        expires            = 5;
+        optional string        memo               = 6;
+        optional bytes         merchant_data      = 7;
+    }
+</pre>
+
+{|
+| network || Either "main" for payments on the production Bitcoin network, or "test" for payments on test network. If a client receives a PaymentRequest for a network it does not support it must reject the request.
+|-
+| payment_method_url || Secure (usually https) location where a PaymentMethod message (see below) may be sent to obtain a PaymentRequest.
+|-
+| items || A list of PaymentItem objects describing different parts of payment (e.g. invoice, tips, donations etc).
+|-
+| time || Unix timestamp (seconds since 1-Jan-1970 UTC) when the PaymentRequest was created.
+|-
+| expires || Unix timestamp (UTC) after which the PaymentRequest should be considered invalid.
+|-
+| memo || UTF-8 encoded, plain-text (no formatting) note that should be displayed to the customer, explaining what this PaymentMethodRequest is for.
+|-
+| merchant_data || Arbitrary data that may be used by the merchant to identify the PaymentRequest. May be omitted if the merchant does not need to associate Payments with PaymentRequest or if they associate each PaymentRequest with a separate payment address.
+|}
+
+===Payment Item===
+
+Each item has a type. The default type is "default" which means the ordinary payment. Different types should be used for different behavior or different UI. For instance, "tip" type may be used to let wallet application ask user to add a tip. Another type "deposit" can be used to communicate that this payment will normally be refunded and may be paid with different assets. Types other that "default" are beyond the scope of this specification.
+
+<pre>
+    message PaymentItem {
+        optional string type                   = 1 [default = "default"];
+        optional bool   optional               = 2 [default = false];
+        optional bytes  item_identifier        = 3;
+        optional uint64 amount                 = 4 [default = 0];
+        repeated AcceptedAsset accepted_assets = 5;
+        optional string memo                   = 6;
+    }
+</pre>
+{|
+| type || Standard identifier of a type of the item. Clients that do not know how to react to a certain type should ignore the PaymentItem if it is optional (see below) or consider request invalid if PaymentItem is not optional.
+|-
+| optional || Flag indicating whether this payment item is optional or not. If omitted, item is considered required.
+|-
+| item_identifier || Arbitrary data that may be used by the merchant to identify this item in the PaymentMethod response.
+|-
+| amount || Number of units to be paid. Possible assets and conversion ratios are covered in AcceptedAsset message. If amount is zero or missing, client may put arbitrary amount.
+|-
+| accepted_assets || One or more assets acceptable for this item. See below for AcceptedAsset description.
+|-
+| memo || A human-readable description of the item (summary of the invoice, or name of a charity).
+|}
+
+
+===Accepted Asset===
+
+<pre>
+    message AcceptedAsset {
+        optional string asset_id = 1 [default = "default"];
+        optional string asset_group = 2;
+        optional double multiplier = 3 [default = 1.0];
+        optional uint64 min_amount = 4 [default = 0];
+        optional uint64 max_amount = 5;
+    }
+</pre>
+{|
+| asset_id || Open Assets identifier of the asset. Special value "default" (the default value) designates native currency for the current network (e.g. BTC for Bitcoin mainnet).
+|-
+| asset_group || Arbitrary string describing a group of assets. Client may choose any assets matching the group (e.g. based on Asset Definition file, or defined via other means). If both '''asset_id''' and '''asset_group''' are missing, raw bitcoins are assumed.
+|-
+| multiplier || Conversion ratio to estimate how many units of a certain asset are required to satisfy the amount in the payment item (number of asset units must be multiplied by this value to be compared with '''amount''' field in the PaymentItem). It does not need to be precise because precise amounts will be computed by the merchant in PaymentRequest. This value is used for UI purposes mostly.
+|-
+| min_amount || Minimum amount of units of this asset accepted by the merchant. Multiplier is not used to compare units with this value.
+|-
+| max_amount || Maximum amount of units of this asset accepted by the merchant. Multiplier is not used to compare units with this value.
+|}
+
+
+===Payment Method===
+
+When client chooses a payment method, it replies to '''payment_method_url''' with a PaymentMethod message.
+
+Merchant may match PaymentMethodItem with PaymentItem objects using either '''type''' or '''item_identifier''' fields. For type "invoice" there is usually one field and there is no need to specify '''item_identifier'''. Client must copy both '''type''' and '''item_identifier''' to corresponding PaymentMethodItem objects (if they are present).
+
+<pre>
+    message PaymentMethod {
+        optional bytes             merchant_data    = 1;
+        repeated PaymentMethodItem items            = 2;
+    }
+    
+    message PaymentMethodItem {
+        optional string             type                = 1 [default = "default"];
+        optional bytes              item_identifier     = 2;
+        repeated PaymentMethodAsset payment_item_assets = 3;
+    }
+    
+    message PaymentMethodAsset {
+        optional string            asset_id = 1 [default = "default"];
+        optional uint64            amount   = 2;
+    }
+</pre>
+
+{|
+| merchant_data || Copied from PaymentMethodDetails.merchant_data. Merchants may use invoice numbers or any other data they require to match Payments to  PaymentRequests. Note that malicious clients may modify the merchant_data, so should be authenticated in some way (for example, signed with a merchant-only key).
+|-
+| items || List of PaymentMethodItem objects describing assets and amounts used to pay for the corresponding PaymentItem.
+|-
+| item_identifier || Copied from PaymentItem.item_identifier. Used to match PaymentItemMethod with a corresponding PaymentItem.
+|-
+| payment_item_assets || One or more payment descriptions of assets for each payment item.
+|-
+| payment_item_type || Type of payment item as specified in PaymentItem message.
+|-
+| asset_id || Open Assets identifier of the asset. Special value "default" (also a default) designates native currency on the current network.
+|-
+| amount || Optional amount to be paid. If specified, [[payment-requests.mediawiki|Payment Request]] must contain that amount. If not specified, Payment Request may contain arbitrary amount to ensure the payment item is fully paid.
+|}
+
+
+===Payment Method Rejection===
+
+If client specifies unsupported assets or invalid amounts, then merchant may reply with a detailed description of why payment method negotiation failed.
+
+Rejection message may contain zero or more reasons for rejecting specific assets.
+
+<pre>
+    message PaymentMethodRejection {
+      optional string memo = 1;
+      optional uint64 code = 2;
+      repeated PaymentMethodRejectedAsset rejected_assets = 3;
+    }
+    message PaymentMethodRejectedAsset {
+      required string asset_id = 1;
+      optional uint64 code     = 2;
+      optional string reason   = 3;
+    }
+</pre>
+
+{|
+| memo || Human-readable reason for rejection, not specific to any asset.
+|-
+| rejected_assets || Optional list of per-asset rejection reasons.
+|-
+| code || Optional merchant-defined numeric code of the error. Clients may use it for debugging purposes or to display appropriate UI.
+|-
+| asset_id || Identifier of an asset that caused rejection.
+|-
+| reason || Human-readable reason for rejecting the given asset.
+|}
+
+
+===MIME types===
+
+Negotiation of payment methods begins with the same URL used by [[payment-requests.mediawiki|Payment Requests]].
+
+To adopt payment methods, clients should add <code>application/oa-paymentmethodrequest</code> to the <code>Accept:</code> header when accessing a [[payment-requests.mediawiki|Payment Request URI]]. Compatible merchants should reply with a '''Payment Method Request''' message and <code>Content-type: application/oa-paymentmethodrequest</code>. If the client also supports [[payment-requests.mediawiki|Open Assets or pure Bitcoin payment requests]], appropriate MIME types should be added to the <code>Accept:</code> list and corresponding messages should be expected.
+
+Clients should reply with '''Payment Method''' message to <code>payment_method_url</code> URI with <code>application/oa-paymentrequest</code> among accepted types. Client SHOULD NOT reply with accepted type <code>application/oa-paymentmethodrequest</code> to avoid receiving '''Payment Method Request''' once again instead of a '''Payment Request'''. Content type for Payment Method message (both for request and response) is <code>application/oa-paymentmethod</code>.
+
+'''Payment Method Rejection''' message uses content type <code>application/oa-paymentmethodrejection</code>.
+
+==See Also==
+
+* [[payment-requests.mediawiki|Open Assets Extensions to Payment Requests]]
+* [[specification.mediawiki|Open Assets Protocol Specification]]
