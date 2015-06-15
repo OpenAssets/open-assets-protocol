@@ -15,3 +15,5 @@ Source code related to the Open Assets Protocol:
 * [`openassets` Python module](https://github.com/OpenAssets/openassets): The reference implementation of the Open Assets Protocol
 * [Colorcore](https://github.com/OpenAssets/colorcore): A client providing a command line and RPC interface for performing operations through the Open Assets Protocol
 * [NBitcoin](https://github.com/NicolasDorier/NBitcoin): A Complete .NET Library for Bitcoin with its [TransactionBuilder](http://www.codeproject.com/Articles/835098/NBitcoin-Build-Them-All) to issue, transfer and swap assets
+* [BTCRuby](https://github.com/oleganza/btcruby): A Complete Ruby Library for Bitcoin with its [TransactionBuilder](https://github.com/oleganza/btcruby/blob/master/lib/btcruby/open_assets/asset_transaction_builder.rb) to issue, transfer and swap assets
+* [CoreBitcoin](https://github.com/oleganza/CoreBitcoin): A Complete Objective-C Library for Bitcoin with support for [Payment Requests](payment-requests.mediawiki) and [Payment Methods](payment-methods.mediawiki)
