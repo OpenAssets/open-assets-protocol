@@ -53,19 +53,9 @@ Transactions that are not recognized as an Open Assets transaction are considere
 
 ===Marker output===
 
-The marker output can have a zero or non-zero value. If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as regular outputs. If no valid marker output exists in the transaction, all outputs are considered uncolored.
+The marker output can have a zero or non-zero value. The marker output starts with the OP_RETURN opcode, and can be followed by any sequence of opcodes, but it must contain a PUSHDATA opcode containing a parsable Open Assets marker payload. If multiple parsable PUSHDATA opcodes exist in the same output, the first one is used, and the other ones are ignored.
 
-The marker output uses the OP_RETURN opcode. The contents of the marker output are described below:
-
-{|
-! Field               !! Description !! Size
-|-
-! OP_RETURN opcode    || The OP_RETURN opcode (0x6a). || 1 byte
-|-
-! PUSHDATA opcode     || The [https://en.bitcoin.it/wiki/Script#Constants PUSHDATA] opcode required to push the full payload onto the stack (0x01 to 0x4e, depending on the size of the payload). || 1-5 bytes
-|-
-! Open Assets Payload || See below. || Variable
-|}
+If multiple valid marker outputs exist in the same transaction, the first one is used and the other ones are considered as regular outputs. If no valid marker output exists in the transaction, all outputs are considered uncolored.
 
 The payload as defined by the Open Assets protocol has the following format:
 
@@ -89,7 +79,7 @@ Possible formats for the <code>metadata</code> field are outside of scope of thi
 
 The <code>asset quantity list</code> field is used to determine the asset quantity of each output. Each integer is encoded using variable length [http://en.wikipedia.org/wiki/LEB128 LEB128] encoding (also used in [https://developers.google.com/protocol-buffers/docs/encoding#varints Google Protocol Buffers]). If the LEB128-encoded asset quantity of any output exceeds 9 bytes, the marker output is deemed invalid. The maximum valid asset quantity for an output is 2<sup>63</sup> - 1 units.
 
-If the marker output is malformed, it is considered invalid. Coinbase transactions and transactions with zero inputs cannot have a valid marker output, even if it would be otherwise considered valid.
+If the marker output is malformed, it is considered non-parsable. Coinbase transactions and transactions with zero inputs cannot have a valid marker output, even if it would be otherwise considered valid.
 
 If there are less items in the <code>asset quantity list</code> than the number of colorable outputs (all the outputs except the marker output), the outputs in excess receive an asset quantity of zero. If there are more items in the <code>asset quantity list</code> than the number of colorable outputs, the marker output is deemed invalid. The marker output is always uncolored.
 
